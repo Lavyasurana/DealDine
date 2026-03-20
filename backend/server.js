@@ -7,6 +7,8 @@ import userRouter from './routers/userRoute.js';
 import payRouter from './routers/razorpayRoute.js';
 import Couponrouter from './routers/userCouponRouter.js';
 import adminRouter from './routers/adminRouter.js';
+import helmet from "helmet";
+
 
 
 const app=express();
@@ -15,6 +17,8 @@ connectDB();
 
 app.use(cors());
 app.use(express.json());
+app.use(helmet());
+
 app.use('/api/deals',dealRouter)
 app.use('/api/user',userRouter)
 app.use('/payment',payRouter)

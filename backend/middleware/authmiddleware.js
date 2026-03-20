@@ -15,6 +15,7 @@ export const authMiddleware = (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
     console.log(decoded)
+   
     
 
     req.user = decoded;   // attach user data to request

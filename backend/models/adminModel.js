@@ -35,6 +35,12 @@ const adminSchema = new mongoose.Schema({
     type: String
   },
 
+  imageUrl:{
+    type:String,required:false
+  },
+
+
+
   
 
   createdAt: {

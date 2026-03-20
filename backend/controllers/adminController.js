@@ -2,8 +2,12 @@ import adminModel from "../models/adminModel.js"
 import bcrypt from "bcrypt"
 import jwt from "jsonwebtoken"
 
-const createToken = (id)=>{
-  return jwt.sign({id},process.env.JWT_SECRET_KEY)
+const createToken = (admin)=>{
+  return jwt.sign(
+    { id: admin._id, role: "admin" },
+    process.env.JWT_SECRET_KEY,
+    { expiresIn: "7d" }
+  )
 }
 
 /* REGISTER ADMIN */
@@ -37,7 +41,7 @@ export const registerAdmin = async(req,res)=>{
 
     await admin.save()
 
-    const token = createToken(admin._id)
+    const token = createToken(admin)
 
     res.json({
       success:true,
@@ -69,23 +73,24 @@ export const loginAdmin = async(req,res)=>{
     if(!admin){
       return res.json({
         success:false,
-        message:"Admin not found"
+        message:"email or password wrong"
       })
     }
 
     const isMatch = await bcrypt.compare(password,admin.password)
 
     if(!isMatch){
+      await new Promise(resolve => setTimeout(resolve, 1000)); // 1 sec delay
       return res.json({
         success:false,
-        message:"Invalid credentials"
+        message:"email or password wrong"
       })
     }
 
     admin.lastLogin = new Date()
     await admin.save()
 
-    const token = createToken(admin._id)
+    const token = createToken(admin)
 
     res.json({
       success:true,

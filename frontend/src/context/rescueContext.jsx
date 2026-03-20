@@ -11,6 +11,7 @@ const RescueProvider = (props) => {
     const [userLogin, setUserLogin] = useState(false);
     const navigate = useNavigate();
     const[liveDeals,setLiveDeals]=useState([])
+    const [user, setUser] = useState(null);
 
     useEffect(() => {
         const token = localStorage.getItem("token");
@@ -44,14 +45,40 @@ const RescueProvider = (props) => {
         getAllDeals();
     },[])
 
+    const getUser = async () => {
+        try {
+          const res = await axios.get(`${backendUrl}/api/user/me`);
+      
+          if (res.data.success) {
+            setUser(res.data.user);
+          }
+        } catch (err) {
+          console.log("Failed to fetch user");
+        }
+      };
+
+      useEffect(() => {
+        const token = localStorage.getItem("token");
+      
+        if (token) {
+          setUserLogin(true);
+          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      
+          getUser();
+        }
+      }, []);
+
     const value = {
         liveDeals,
         backendUrl,
         navigate,
         userLogin,
         setUserLogin,
-        logout
+        logout,
+        userCredits: user?.credits || 0   
     };
+
+
 
     return (
         <rescueContext.Provider value={value}>

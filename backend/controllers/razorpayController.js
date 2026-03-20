@@ -63,4 +63,75 @@ const validateOrder = async (req, res) => {
   }
 };
 
+
+// controllers/paymentController.js
+
+import userModel from "../models/userModel.js";
+import dealModel from "../models/dealModel.js";
+import UserCoupon from "../models/userCouponModel.js";
+
+export const payWithCredits = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { dealId } = req.body;
+
+    const user = await userModel.findById(userId);
+    const deal = await dealModel.findById(dealId);
+
+    if (!user || !deal) {
+      return res.json({
+        success: false,
+        message: "Invalid user or deal",
+      });
+    }
+
+    // ❌ Check duplicate coupon (reuse your logic)
+    const existing = await UserCoupon.findOne({
+      user: userId,
+      deal: dealId,
+      isUsed: false,
+    });
+
+    if (existing) {
+      return res.json({
+        success: false,
+        message: "You already own this coupon",
+      });
+    }
+
+    // ❌ Not enough credits
+    if (user.credits < deal.price) {
+      return res.json({
+        success: false,
+        message: "Not enough credits",
+      });
+    }
+
+    // ✅ Deduct credits
+    user.credits -= deal.price;
+    await user.save();
+
+    // ✅ Create coupon (same as your flow)
+    const coupon = await UserCoupon.create({
+      user: userId,
+      deal: dealId,
+    });
+
+    await coupon.populate("deal");
+
+    return res.json({
+      success: true,
+      message: "Deal unlocked using credits 🎉",
+      coupon,
+      remainingCredits: user.credits,
+    });
+
+  } catch (error) {
+    console.log(error);
+    res.json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
 export {validateOrder,getOrder}

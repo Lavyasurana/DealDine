@@ -16,6 +16,8 @@ const userSchema = new mongoose.Schema({
 
   phone: { type: String, required: true,unique:true },
 
+  credits:{type:Number,default:100},
+
   issuedCoupons: [
     {
       type: mongoose.Schema.Types.ObjectId,
