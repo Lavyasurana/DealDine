@@ -75,7 +75,9 @@ const RescueProvider = (props) => {
         userLogin,
         setUserLogin,
         logout,
-        userCredits: user?.credits || 0   
+        userCredits: user?.credits || 0 ,
+        setUser  ,
+        getUser
     };
 
 

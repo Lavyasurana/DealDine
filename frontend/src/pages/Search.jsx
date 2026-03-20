@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect, useContext } from "react"
 import axios from "axios"
 import { UpcomingDealTemplate } from "../components/UpcomingDealTemplate"
+import { rescueContext } from "../context/rescueContext"
 
 const Search = () => {
 
   const [query,setQuery] = useState("")
   const [results,setResults] = useState([])
 
-  const backendUrl = "http://localhost:5111"
+  const{backendUrl}=useContext(rescueContext);
 
   useEffect(()=>{
 

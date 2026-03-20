@@ -1,37 +1,57 @@
-import Razorpay from 'razorpay'
+import Razorpay from "razorpay";
 import crypto from "node:crypto";
+import userModel from "../models/userModel.js";
+import dealModel from "../models/dealModel.js";
+import UserCoupon from "../models/userCouponModel.js";
 
-const getOrder=async(req,res)=> {
-    try {
-      const razorpay = new Razorpay({
-        key_id: process.env.RAZORPAY_KEY_ID,
-        key_secret: process.env.RAZORPAY_SECRET,
+// ================= CREATE ORDER =================
+export const getOrder = async (req, res) => {
+  try {
+    const { amount, currency, receipt } = req.body;
+
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_SECRET,
+    });
+
+    const options = {
+      amount,
+      currency,
+      receipt,
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    if (!order) {
+      return res.status(500).json({
+        success: false,
+        message: "Order creation failed",
       });
-  
-      const options = req.body;
-      const order = await razorpay.orders.create(options);
-  
-      if (!order) {
-        return res.status(500).send("Error");
-      }
-  
-      res.json(order);
-    } catch (err) {
-      console.log(err);
-      res.status(500).send("Error");
     }
-  
-}
 
+    return res.json(order);
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
+};
 
-const validateOrder = async (req, res) => {
+// ================= VALIDATE + CREATE COUPON =================
+export const validateOrder = async (req, res) => {
   try {
     const {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
+      dealId,
     } = req.body;
 
+    const userId = req.user.id;
+
+    // 🔐 Verify payment signature
     const sha = crypto.createHmac(
       "sha256",
       process.env.RAZORPAY_SECRET
@@ -43,15 +63,45 @@ const validateOrder = async (req, res) => {
     if (digest !== razorpay_signature) {
       return res.status(400).json({
         success: false,
-        message: "Transaction is not legit!",
+        message: "Invalid payment signature",
       });
     }
 
+    // 🔍 Check deal exists
+    const deal = await dealModel.findById(dealId);
+    if (!deal) {
+      return res.json({
+        success: false,
+        message: "Deal not found",
+      });
+    }
+
+    // 🚫 Prevent duplicate coupon
+    const existing = await UserCoupon.findOne({
+      user: userId,
+      deal: dealId,
+      isUsed: false,
+    });
+
+    if (existing) {
+      return res.json({
+        success: false,
+        message: "You already own this coupon",
+      });
+    }
+
+    // ✅ Create coupon
+    const coupon = await UserCoupon.create({
+      user: userId,
+      deal: dealId,
+    });
+
+    await coupon.populate("deal");
+
     return res.json({
       success: true,
-      message: "Payment verified successfully",
-      orderId: razorpay_order_id,
-      paymentId: razorpay_payment_id,
+      message: "Payment successful & coupon created 🎉",
+      coupon,
     });
 
   } catch (error) {
@@ -63,13 +113,7 @@ const validateOrder = async (req, res) => {
   }
 };
 
-
-// controllers/paymentController.js
-
-import userModel from "../models/userModel.js";
-import dealModel from "../models/dealModel.js";
-import UserCoupon from "../models/userCouponModel.js";
-
+// ================= PAY WITH CREDITS =================
 export const payWithCredits = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -85,7 +129,7 @@ export const payWithCredits = async (req, res) => {
       });
     }
 
-    // ❌ Check duplicate coupon (reuse your logic)
+    // 🚫 Duplicate check
     const existing = await UserCoupon.findOne({
       user: userId,
       deal: dealId,
@@ -111,7 +155,7 @@ export const payWithCredits = async (req, res) => {
     user.credits -= deal.price;
     await user.save();
 
-    // ✅ Create coupon (same as your flow)
+    // ✅ Create coupon
     const coupon = await UserCoupon.create({
       user: userId,
       deal: dealId,
@@ -134,4 +178,3 @@ export const payWithCredits = async (req, res) => {
     });
   }
 };
-export {validateOrder,getOrder}

@@ -9,7 +9,7 @@ export function Profile() {
   const [coupons, setCoupons] = useState([]);
   const [user, setUser] = useState(null);
 
-  const { backendUrl } = useContext(rescueContext);
+  const { backendUrl,userCredits } = useContext(rescueContext);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -95,7 +95,7 @@ export function Profile() {
             <div className="bg-gradient-to-r from-black to-gray-800 text-white p-6 rounded-2xl shadow-lg flex justify-between items-center">
               <div>
                 <p className="text-sm opacity-70">Available Credits</p>
-                <h2 className="text-3xl font-bold">₹{user.credits}</h2>
+                <h2 className="text-3xl font-bold">₹{userCredits}</h2>
               </div>
 
               <Wallet size={32} className="opacity-80" />

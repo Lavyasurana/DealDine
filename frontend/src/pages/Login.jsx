@@ -13,7 +13,7 @@ export function Login() {
     const [confirmPassword, setConfirmPassword] = useState('')
     const [currentState, setCurrentState] = useState('Sign Up')
 
-    const { backendUrl, navigate, setUserLogin } = useContext(rescueContext);
+    const { backendUrl, navigate, setUserLogin,getUser } = useContext(rescueContext);
     const onSubmitHandler = async (event) => {
         event.preventDefault();
     
@@ -49,6 +49,7 @@ export function Login() {
                     axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     
                     setUserLogin(true);
+                    await getUser()
     
                     toast.success("Successfully logged in");
     

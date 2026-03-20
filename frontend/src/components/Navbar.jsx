@@ -130,11 +130,11 @@ export default function Navbar() {
           </NavLink>
 
           <NavLink
-            to="/about"
+            to="/search"
             onClick={() => setIsOpen(false)}
             className="block text-gray-700 hover:text-emerald-600"
           >
-            About
+           Search
           </NavLink>
 
           <NavLink

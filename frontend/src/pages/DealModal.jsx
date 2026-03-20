@@ -9,7 +9,7 @@ import axios from "axios";
 export function DealModal() {
   const { dealId } = useParams();
 
-  const { liveDeals, backendUrl, navigate, userCredits,setUser } =
+  const { liveDeals, backendUrl, navigate, userCredits,setUser,userLogin } =
     useContext(rescueContext);
 
   const [open, setOpen] = useState(false);
@@ -36,23 +36,29 @@ export function DealModal() {
   // ================= RAZORPAY =================
   const paymentHandler = async (e) => {
     e.preventDefault();
-
+  
     try {
       const token = localStorage.getItem("token");
-
+  
       if (!token) {
         toast.error("Please login first");
         return navigate("/login");
       }
-
+  
+      // 🔹 Step 1: Create order
       const { data: order } = await axios.post(
         `${backendUrl}/payment/order`,
-        { amount, currency, receipt: receiptId },
+        {
+          amount: deal.price * 100,
+          currency: "INR",
+          receipt: "receipt_" + Date.now(),
+        },
         {
           headers: { Authorization: `Bearer ${token}` },
         }
       );
-
+  
+      // 🔹 Step 2: Razorpay popup
       const options = {
         key: "rzp_test_SMSjR7h5ZhWjTw",
         amount: order.amount,
@@ -60,46 +66,37 @@ export function DealModal() {
         order_id: order.id,
         name: "DealDine",
         description: deal.dealName,
-
+  
         handler: async function (response) {
           try {
+            // 🔹 Step 3: Validate + create coupon
             const { data: validateRes } = await axios.post(
               `${backendUrl}/payment/validate`,
-              response,
+              { ...response, dealId },
               {
                 headers: { Authorization: `Bearer ${token}` },
               }
             );
-
+  
             if (validateRes.success) {
-              const { data: couponRes } = await axios.post(
-                `${backendUrl}/coupon/create`,
-                { dealId },
-                {
-                  headers: { Authorization: `Bearer ${token}` },
-                }
-              );
-
-              if (couponRes.success) {
-                toast.success("Payment Successful 🎉");
-                navigate(`/coupon/${couponRes.coupon._id}`);
-              } else {
-                toast.error(couponRes.message);
-              }
+              toast.success("Payment Successful 🎉");
+              navigate(`/coupon/${validateRes.coupon._id}`);
             } else {
-              toast.error("Payment verification failed");
+              toast.error(validateRes.message);
             }
+  
           } catch (err) {
             console.error(err);
             toast.error("Validation failed");
           }
         },
-
+  
         theme: { color: "#000000" },
       };
-
+  
       const rzp = new window.Razorpay(options);
       rzp.open();
+  
     } catch (error) {
       console.error(error);
       toast.error("Payment failed");
@@ -198,9 +195,10 @@ export function DealModal() {
               </button>
 
               {/* Credits */}
+            
               <button
                 onClick={payWithCreditsHandler}
-                disabled={userCredits < deal.price || loadingCredits}
+                disabled={userCredits < deal.price || loadingCredits || !userLogin}
                 className={`w-full py-3 rounded-xl transition ${
                   userCredits >= deal.price
                     ? "bg-green-600 hover:bg-green-700 text-white"
