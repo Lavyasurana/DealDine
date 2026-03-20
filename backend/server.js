@@ -12,7 +12,7 @@ import helmet from "helmet";
 
 
 const app=express();
-const PORT=5111;
+const PORT = process.env.PORT || 5111;
 connectDB();
 
 app.use(cors());
