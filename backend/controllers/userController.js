@@ -2,7 +2,7 @@ import userModel from "../models/userModel.js";
 import validator from 'validator'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
-
+import nodemailer from "nodemailer";
 
 const createToken=async(id)=>{
     const token= jwt.sign({id},process.env.JWT_SECRET_KEY, { expiresIn: "1d" })
@@ -90,4 +90,85 @@ const getCurrentUser = async (req, res) => {
     }
   };
 
-export {userLogin,userRegister,getCurrentUser}
+  const forgotPassword = async (req, res) => {
+    try {
+      const { email } = req.body;
+  
+      const user = await userModel.findOne({ email });
+  
+      // IMPORTANT: don't reveal if user exists
+      if (!user) {
+        return res.json({
+          success: true,
+          message: "If email exists, reset link sent",
+        });
+      }
+  
+      // Generate token (15 min expiry)
+      const token = jwt.sign(
+        { id: user._id },
+        process.env.JWT_SECRET_KEY,
+        { expiresIn: "15m" }
+      );
+  
+      const resetLink = `${process.env.CLIENT_URL}/reset-password/${token}`;
+  
+      // Mail transporter
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: process.env.EMAIL,
+          pass: process.env.EMAIL_PASSWORD,
+        },
+      });
+  
+      await transporter.sendMail({
+        from: `"DealDine" <${process.env.EMAIL}>`,
+        to: email,
+        subject: "Reset Your Password",
+        html: `
+          <h2>Password Reset Request</h2>
+          <p>Click below to reset your password:</p>
+          <a href="${resetLink}">${resetLink}</a>
+          <p>This link expires in 15 minutes.</p>
+        `,
+      });
+  
+      res.json({ success: true, message: "Reset link sent" });
+  
+    } catch (error) {
+      console.log(error);
+      res.json({ success: false, message: "Error sending reset email" });
+    }
+  };
+
+  const resetPassword = async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+  
+      const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+  
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+  
+      await userModel.findByIdAndUpdate(decoded.id, {
+        password: hashedPassword,
+      });
+  
+      res.json({ success: true, message: "Password reset successful" });
+  
+    } catch (error) {
+      console.log(error);
+      res.json({ success: false, message: "Invalid or expired token" });
+    }
+  };
+
+
+
+  export {
+    userLogin,
+    userRegister,
+    getCurrentUser,
+    forgotPassword,
+    resetPassword
+  };

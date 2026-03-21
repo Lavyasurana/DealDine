@@ -26,6 +26,7 @@ const RescueProvider = (props) => {
         localStorage.removeItem("token");
         delete axios.defaults.headers.common["Authorization"];
         setUserLogin(false);
+        setUser(null);
         navigate("/");
     };
 

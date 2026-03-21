@@ -14,6 +14,11 @@ import { ToastContainer,Bounce} from 'react-toastify';
 import { CouponPage } from './pages/stamp'
 import { Profile } from './pages/Profile'
 import Search from './pages/Search'
+import Footer from './components/Footer'
+import { Terms } from './pages/Terms'
+import { Privacy } from './pages/Privacy'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 function App() {
 
 
@@ -46,8 +51,13 @@ function App() {
           <Route path="/coupon/:couponId" element={<CouponPage />} />
           <Route path="/profile" element={<Profile/>}/>
           <Route path='/search' element={<Search/>}/>
-            </Routes>
+          <Route path='/terms' element={<Terms/>}/>
+          <Route path="/privacy" element={<Privacy/>}/>
+          <Route path="/forgot-password" element={<ForgotPassword/>}/>
+          <Route path='/reset-password/:token' element={<ResetPassword/>}/>
+          </Routes>
         </div>
+        <Footer/>
       
 
 </>

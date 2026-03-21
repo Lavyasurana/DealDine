@@ -52,6 +52,8 @@ export function DealModal() {
           amount: deal.price * 100,
           currency: "INR",
           receipt: "receipt_" + Date.now(),
+          
+          
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -60,7 +62,7 @@ export function DealModal() {
   
       // 🔹 Step 2: Razorpay popup
       const options = {
-        key: "rzp_test_SMSjR7h5ZhWjTw",
+        key: import.meta.env.VITE_RAZORPAY_KEY,
         amount: order.amount,
         currency: order.currency,
         order_id: order.id,
@@ -212,7 +214,7 @@ export function DealModal() {
 
               {userCredits < deal.price && (
                 <p className="text-sm text-red-500 text-center">
-                  Not enough credits
+                  {userLogin?"Not enough credits":"Create an account and get 50 credits"}
                 </p>
               )}
             </div>

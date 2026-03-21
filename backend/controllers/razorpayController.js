@@ -7,7 +7,9 @@ import UserCoupon from "../models/userCouponModel.js";
 // ================= CREATE ORDER =================
 export const getOrder = async (req, res) => {
   try {
-    const { amount, currency, receipt } = req.body;
+    
+    const { amount, currency, receipt} = req.body;
+   
 
     const razorpay = new Razorpay({
       key_id: process.env.RAZORPAY_KEY_ID,
@@ -50,6 +52,8 @@ export const validateOrder = async (req, res) => {
     } = req.body;
 
     const userId = req.user.id;
+  
+    
 
     // 🔐 Verify payment signature
     const sha = crypto.createHmac(
@@ -66,29 +70,30 @@ export const validateOrder = async (req, res) => {
         message: "Invalid payment signature",
       });
     }
-
-    // 🔍 Check deal exists
-    const deal = await dealModel.findById(dealId);
-    if (!deal) {
-      return res.json({
-        success: false,
-        message: "Deal not found",
+      // 🔍 Check deal exists
+      const deal = await dealModel.findById(dealId);
+      if (!deal) {
+        return res.json({
+          success: false,
+          message: "Deal not found",
+        });
+      }
+  
+      // 🚫 Prevent duplicate coupon
+      const existing = await UserCoupon.findOne({
+        user: userId,
+        deal: dealId,
+        isUsed: false,
       });
-    }
+  
+      if (existing) {
+        return res.json({
+          success: false,
+          message: "You already own this coupon",
+        });
+      }
 
-    // 🚫 Prevent duplicate coupon
-    const existing = await UserCoupon.findOne({
-      user: userId,
-      deal: dealId,
-      isUsed: false,
-    });
-
-    if (existing) {
-      return res.json({
-        success: false,
-        message: "You already own this coupon",
-      });
-    }
+    
 
     // ✅ Create coupon
     const coupon = await UserCoupon.create({

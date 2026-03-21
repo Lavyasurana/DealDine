@@ -2,6 +2,7 @@ import { useContext, useState } from "react";
 import { rescueContext } from "../context/rescueContext";
 import axios from 'axios'
 import { ToastContainer, toast } from 'react-toastify';
+import { Link } from "react-router-dom";
 
 export function Login() {
     const [firstName, setFirstName] = useState('')
@@ -98,7 +99,7 @@ export function Login() {
                     <input required onChange={(e) => setEmail(e.target.value)} name='email' value={email} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="email" placeholder='Email address' />
                     <input required onChange={(e) => { setPassword(e.target.value) }} name='password' value={password} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="password" placeholder='Password' />
                     <div className='w-full flex justify-between text-sm mt-[-8px]'>
-                        <p className=' cursor-pointer'>Forgot your password?</p>
+                        <Link to="/forgot-password"className=' cursor-pointer'>Forgot your password?</Link>
 
                         <p onClick={() => setCurrentState('Sign Up')} className=' cursor-pointer'>Create account</p>
 
