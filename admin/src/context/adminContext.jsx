@@ -1,11 +1,13 @@
 import { createContext, useState, useEffect } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 export const adminContext = createContext();
 
 const AdminProvider = (props) => {
 
   const [adminLogin, setAdminLogin] = useState(false);
+  const navigate=useNavigate();
 
   useEffect(() => {
 
@@ -22,7 +24,7 @@ const AdminProvider = (props) => {
 
   const backendUrl =import.meta.env.VITE_backend_Url;
 
-  const value = { adminLogin, setAdminLogin,backendUrl };
+  const value = { adminLogin, setAdminLogin,backendUrl,navigate };
 
   return (
     <adminContext.Provider value={value}>

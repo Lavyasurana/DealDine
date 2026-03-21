@@ -3,12 +3,14 @@ import axios from "axios";
 import { adminContext } from "../context/adminContext";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useNavigate } from "react-router-dom";
 
 export function Login() {
   const { setAdminLogin, backendUrl, navigate } = useContext(adminContext);
 
   const [current, setCurrent] = useState("Login");
   const [loading, setLoading] = useState(false);
+  
 
   const [form, setForm] = useState({
     name: "",
@@ -47,7 +49,7 @@ export function Login() {
           toast.success("Login successful");
 
           
-            navigate("/");
+          navigate("/");
           
         } else {
           toast.error(response.data.message);
