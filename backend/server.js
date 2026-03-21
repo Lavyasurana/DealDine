@@ -19,7 +19,7 @@ connectCloudinary();
 
 const allowedOrigins = [
     "https://dealdine.in",
-    "https://www.dealdine.in"
+    "https://www.dealdine.in",
     "https://admin.dealdine.in"
   ];
   
