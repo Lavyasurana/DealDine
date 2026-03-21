@@ -18,8 +18,8 @@ connectDB();
 connectCloudinary();
 
 const allowedOrigins = [
-    "http://localhost:5173",
-    "http://localhost:5174"
+    "https://dealdine.in",
+      "https://www.dealdine.in"
   ];
   
   app.use(cors({
