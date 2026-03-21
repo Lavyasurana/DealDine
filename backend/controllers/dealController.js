@@ -4,41 +4,59 @@ import userModel from "../models/userModel.js"
 
 import { sendDealEmail } from "../services/emailService.js"
 
-const addDeal = async(req,res)=>{
-  try{
+import adminModel from "../models/adminModel.js";
 
-    const adminId = req.user.id
 
+
+const addDeal = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+
+    // ✅ 1. Fetch admin details
+    const admin = await adminModel.findById(adminId);
+
+    if (!admin) {
+      return res.json({
+        success: false,
+        message: "Admin not found"
+      });
+    }
+
+    // ✅ 2. Create deal with admin data
     const deal = new dealModel({
       ...req.body,
-      admin:adminId
-    })
+      admin: adminId,
 
-    await deal.save()
+      // inject from admin
+      resName: admin.restaurantName,
+      location: admin.location,
+      town: admin.town,
+      image: admin.imageUrl
+    });
 
-    /* FETCH USERS */
-    const users = await userModel.find()
+    await deal.save();
 
-    /* SEND EMAIL TO EACH USER */
+    // ✅ 3. Fetch users
+    const users = await userModel.find();
 
-    for(let user of users){
-      await sendDealEmail(user.email, deal)
+    // ⚠️ 4. Send emails (we’ll optimize below)
+    for (let user of users) {
+      await sendDealEmail(user.email, deal);
     }
 
     res.json({
-      success:true,
-      message:"Deal Added & Users Notified"
-    })
+      success: true,
+      message: "Deal Added & Users Notified"
+    });
 
-  }catch(error){
-    console.log(error)
-
+  } catch (error) {
+    console.log(error);
     res.json({
-      success:false,
-      message:"Error adding deal"
-    })
+      success: false,
+      message: "Error adding deal"
+    });
   }
-}
+};
 
 
 

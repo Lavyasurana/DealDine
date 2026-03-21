@@ -14,8 +14,15 @@ const createToken = (admin)=>{
 
 export const registerAdmin = async(req,res)=>{
   try{
+    const {name,email,password,restaurantName} = req.body
+    const allowed = await allowedModel.findOne({ email });
 
-    const {name,email,password,restaurantName,phone,location,town} = req.body
+    if (!allowed) {
+      return res.json({
+        success: false,
+        message: "You are not authorized to register"
+      });
+    }
 
     const existing = await adminModel.findOne({email})
 
@@ -32,20 +39,18 @@ export const registerAdmin = async(req,res)=>{
     const admin = new adminModel({
       name,
       email,
-      password:hashedPassword,
       restaurantName,
-      phone,
-      location,
-      town
+      password:hashedPassword,
+     
     })
 
     await admin.save()
 
-    const token = createToken(admin)
+   
 
     res.json({
       success:true,
-      token
+     
     })
 
   }catch(error){
@@ -108,3 +113,50 @@ export const loginAdmin = async(req,res)=>{
 
   }
 }
+
+
+import cloudinary from "../config/cloudinary.js";
+import allowedAdminModel from "../models/allowedAdminModel.js"
+import allowedModel from "../models/allowedAdminModel.js"
+
+export const adminProfile = async (req, res) => {
+  try {
+    const { restaurantName, location, town } = req.body;
+    const userId = req.user.id;
+
+    let imageUrl = "";
+
+    // upload image only if provided
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path);
+      imageUrl = result.secure_url;
+    }
+
+    const updatedUser = await adminModel.findByIdAndUpdate(
+      userId,
+      {
+        restaurantName,
+        location,
+        town,
+        ...(imageUrl && { imageUrl }) // update image only if exists
+      },
+      { new: true } // returns updated doc
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating profile"
+    });
+  }
+};
+
+
+

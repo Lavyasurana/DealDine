@@ -8,6 +8,18 @@ const Sidebar = () => {
 
       <div className='flex flex-col gap-4 pt-6 pl-[20%] text-[15px]'>
 
+      <NavLink
+          to="/profile"
+          className={({isActive}) =>
+            `flex items-center gap-3 border border-gray-300 border-r-0 px-3 py-2 rounded-l ${
+              isActive ? "bg-emerald-100 border-emerald-500" : ""
+            }`
+          }
+        >
+          <PlusCircle className='w-5 h-5'/>
+          <p className='hidden md:block'>Profile</p>
+        </NavLink>
+
         {/* Add Coupon */}
         <NavLink
           to="/add-coupon"

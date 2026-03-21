@@ -6,16 +6,16 @@ import {adminContext} from "../context/adminContext";
 const AddCoupon = () => {
 
   const{backendUrl}=useContext(adminContext);
+  const [loading, setLoading] = useState(false);
   const [data,setData] = useState({
-    resName:"",
+    
     dealName:"",
     description:"",
     price:"",
-    location:"",
-    town:"",
+  
     validFrom:"",
     validTill:"",
-    image:""
+    
   })
 
   const handleChange = (e)=>{
@@ -24,6 +24,7 @@ const AddCoupon = () => {
 
   const submitHandler = async(e)=>{
     e.preventDefault()
+    if (loading) return;
 
     try{
       const res = await axios.post(`${backendUrl}/api/deals/addDeal`,data)
@@ -31,21 +32,23 @@ const AddCoupon = () => {
       if(res.data.success){
         alert("Coupon Added Successfully")
         setData({
-          resName:"",
+          
           dealName:"",
           description:"",
           price:"",
-          location:"",
-          town:"",
+         
           validFrom:"",
           validTill:"",
-          image:""
+          
         })
       }
 
     }catch(err){
       console.log(err)
       alert("Error adding coupon")
+    }
+    finally {
+      setLoading(false); 
     }
   }
 
@@ -54,15 +57,7 @@ const AddCoupon = () => {
 
       <form onSubmit={submitHandler} className="flex flex-col gap-4">
 
-        <input
-          type="text"
-          name="resName"
-          placeholder="Restaurant Name"
-          value={data.resName}
-          onChange={handleChange}
-          required
-          className="border p-2 rounded"
-        />
+        
 
         <input
           type="text"
@@ -92,25 +87,7 @@ const AddCoupon = () => {
           className="border p-2 rounded"
         />
 
-        <input
-          type="text"
-          name="location"
-          placeholder="Location"
-          value={data.location}
-          onChange={handleChange}
-          required
-          className="border p-2 rounded"
-        />
-
-        <input
-          type="text"
-          name="town"
-          placeholder="Town"
-          value={data.town}
-          onChange={handleChange}
-          required
-          className="border p-2 rounded"
-        />
+       
 
         <label>Valid From</label>
         <input
@@ -130,15 +107,7 @@ const AddCoupon = () => {
           className="border p-2 rounded"
         />
 
-        <input
-          type="text"
-          name="image"
-          placeholder="Image URL"
-          value={data.image}
-          onChange={handleChange}
-          required
-          className="border p-2 rounded"
-        />
+        
 
         <button
           type="submit"

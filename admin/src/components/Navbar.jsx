@@ -32,7 +32,7 @@ const Navbar = () => {
       {/* Right Side */}
       <div>
 
-        {!adminLogin && !localStorage.getItem("token") ? (
+        {!adminLogin && !localStorage.getItem("adminToken") ? (
 
           <button
             onClick={()=>navigate("/login")}
