@@ -3,7 +3,8 @@ import validator from 'validator'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
 import nodemailer from "nodemailer";
-
+import { sendVerificationEmail } from "../services/emailService.js";
+import crypto from "crypto";
 const createToken=async(id)=>{
     const token= jwt.sign({id},process.env.JWT_SECRET_KEY, { expiresIn: "1d" })
     return token;
@@ -19,6 +20,13 @@ const userLogin=async(req,res)=>{
         const isMatch=await bcrypt.compare(password,user.password);
         if(!isMatch)
             return res.json({success:false,message:"Enter valid password"})
+          
+        if (!user.isVerified) {
+          return res.json({
+              success: false,
+              message: "Please verify your email first"
+          });
+      }
     
         const token=await createToken(user._id)
         res.json({success:true,token,user_name:user.name,user_id:user._id})
@@ -48,13 +56,27 @@ const userRegister=async(req,res)=>{
         const salt=await bcrypt.genSalt(10)
         const hashedPassword=await bcrypt.hash(password,salt);
         
-        const user= new userModel({
-            firstName,lastName,phone,email,password:hashedPassword,userId
-        })
+        const token = crypto.randomBytes(32).toString("hex");
+
+        const user = new userModel({
+            firstName,
+            lastName,
+            phone,
+            email,
+            password: hashedPassword,
+            userId,
+            isVerified: false,
+            verificationToken: token
+        });  
     
        
         await user.save();
-        res.json({success:true,userId:user._id})
+        await sendVerificationEmail(email, token);
+
+res.json({
+    success: true,
+    message: "Verification email sent"
+});
    
         
     }catch(error){
@@ -164,11 +186,33 @@ const getCurrentUser = async (req, res) => {
   };
 
 
+  const verifyUser = async (req, res) => {
+    try {
+      const user = await userModel.findOne({
+        verificationToken: req.params.token
+      });
+  
+      if (!user) {
+        return res.send("Invalid or expired token");
+      }
+  
+      user.isVerified = true;
+      user.verificationToken = null;
+  
+      await user.save();
+  
+      res.send("Email verified successfully");
+    } catch (error) {
+      res.send("Error verifying email");
+    }
+  };
+
 
   export {
     userLogin,
     userRegister,
     getCurrentUser,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    verifyUser
   };

@@ -40,10 +40,10 @@ const addDeal = async (req, res) => {
     const users = await userModel.find();
 
     // ⚠️ 4. Send emails (we’ll optimize below)
-    for (let user of users) {
-      await sendDealEmail(user.email, deal);
-    }
-
+   // send emails in background (DON'T BLOCK API)
+Promise.all(
+  users.map(user => sendDealEmail(user.email, deal))
+).catch(err => console.log("Email error:", err));
     res.json({
       success: true,
       message: "Deal Added & Users Notified"

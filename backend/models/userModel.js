@@ -22,8 +22,15 @@ const userSchema = new mongoose.Schema({
     {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Deal"
+    }],
+    isVerified: {
+      type: Boolean,
+      default: false
+    },
+    verificationToken: {
+      type:String
     }
-  ]
+  
 });
 
 const userModel=monngoose.model("user",userSchema)
