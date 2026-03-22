@@ -31,7 +31,7 @@ export function Login() {
                 );
     
                 if (response.data.success) {
-                    toast.success("Registration successful");
+                    toast.success("Check your email to verify your account 📩")
                     setCurrentState("Login");
                 }
     

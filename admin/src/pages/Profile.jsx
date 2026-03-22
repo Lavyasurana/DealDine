@@ -37,6 +37,7 @@ export function Profile() {
             );
             console.log("admin profile success")
             toast.success("Saved Successfully")
+            alert("successfully edited profile")
 
 
            

@@ -26,12 +26,22 @@ const AddCoupon = () => {
   const submitHandler = async(e)=>{
     e.preventDefault()
     if (loading) return;
+    setLoading(true); 
 
     try{
-      const res = await axios.post(`${backendUrl}/api/deals/addDeal`,data)
+      const res = await axios.post(
+        `${backendUrl}/api/deals/addDeal`,
+        data,
+        {
+          withCredentials: true //  IMPORTANT for jwt
+        }
+      );
+  
+      console.log(res.data); 
 
       if(res.data.success){
         toast.success('coupon added successfully')
+        alert("coupon added successfully");
         setData({
           
           dealName:"",
@@ -42,6 +52,9 @@ const AddCoupon = () => {
           validTill:"",
           
         })
+      }
+      else{
+        toast.error(res.data.message)
       }
 
     }catch(err){
