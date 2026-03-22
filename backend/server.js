@@ -17,18 +17,33 @@ const PORT = process.env.PORT || 5111;
 connectDB();
 connectCloudinary();
 
-const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
-  
-  app.use(cors({
-    origin: function(origin, callback){
-      if(!origin || allowedOrigins.includes(origin)){
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true
-  }));
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  .split(",")
+  .map(origin => origin.trim());
+
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      console.log("❌ Blocked by CORS:", origin);
+      return callback(null, false); 
+    }
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+};
+
+
+app.use(cors(corsOptions));
+
+// ✅ Handle preflight requests globally
+app.options("*", cors(corsOptions));
 app.use(express.json());
 app.use(helmet());
 
