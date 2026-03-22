@@ -19,6 +19,7 @@ import { Terms } from './pages/Terms'
 import { Privacy } from './pages/Privacy'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
+import { RefundPolicy } from './pages/Refund'
 function App() {
 
 
@@ -55,6 +56,7 @@ function App() {
           <Route path="/privacy" element={<Privacy/>}/>
           <Route path="/forgot-password" element={<ForgotPassword/>}/>
           <Route path='/reset-password/:token' element={<ResetPassword/>}/>
+          <Route path="/refund" element={<RefundPolicy/>}/>
           </Routes>
         </div>
         <Footer/>

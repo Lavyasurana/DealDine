@@ -27,6 +27,12 @@ export default function Footer() {
           >
             Privacy Policy
           </a>
+          <a
+            href="/refund"
+            className="hover:text-gray-300 transition"
+          >
+            Refund Policy
+          </a>
         </div>
 
         {/* 🔹 Contact */}

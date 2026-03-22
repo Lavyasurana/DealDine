@@ -2,6 +2,7 @@ import React, { useState } from "react"
 import axios from "axios"
 import { useContext } from "react"
 import {adminContext} from "../context/adminContext";
+import {toast} from 'react-toastify';
 
 const AddCoupon = () => {
 
@@ -30,7 +31,7 @@ const AddCoupon = () => {
       const res = await axios.post(`${backendUrl}/api/deals/addDeal`,data)
 
       if(res.data.success){
-        alert("Coupon Added Successfully")
+        toast.success('coupon added successfully')
         setData({
           
           dealName:"",
@@ -45,7 +46,7 @@ const AddCoupon = () => {
 
     }catch(err){
       console.log(err)
-      alert("Error adding coupon")
+      toast.error("Error adding coupon")
     }
     finally {
       setLoading(false); 

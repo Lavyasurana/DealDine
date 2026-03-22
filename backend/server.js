@@ -17,11 +17,7 @@ const PORT = process.env.PORT || 5111;
 connectDB();
 connectCloudinary();
 
-const allowedOrigins = [
-    "https://dealdine.in",
-    "https://www.dealdine.in",
-    "https://admin.dealdine.in"
-  ];
+const allowedOrigins = process.env.ALLOWED_ORIGINS.split(",");
   
   app.use(cors({
     origin: function(origin, callback){
