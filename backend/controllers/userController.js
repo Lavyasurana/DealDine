@@ -71,7 +71,8 @@ const userRegister=async(req,res)=>{
     
        
         await user.save();
-        await sendVerificationEmail(email, token);
+        const x=await sendVerificationEmail(email, token);
+        console.log("email sent",x)
 
 res.json({
     success: true,

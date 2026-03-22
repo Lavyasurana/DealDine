@@ -29,13 +29,21 @@ export const sendDealEmail = async (email, deal) => {
 }
 
 export const sendVerificationEmail = async (email, token) => {
-  const url = `${process.env.FRONTEND_URL}/verify/${token}`;
+  try {
+    const url = `${process.env.FRONTEND_URL}/verify/${token}`;
 
-  await transporter.sendMail({
-    from: process.env.EMAIL,
-    to: email,
-    subject: "Verify your email",
-    html: `<h2>Click below to verify your email</h2>
-           <a href="${url}">${url}</a>`
-  });
+    const info = await transporter.sendMail({
+      from: process.env.EMAIL,
+      to: email,
+      subject: "Verify your email",
+      html: `<h2>Click below to verify your email</h2>
+             <a href="${url}">${url}</a>`
+    });
+
+    console.log("✅ Verification email sent:", info.response);
+
+  } catch (error) {
+    console.log("❌ Email failed:", error.message);
+    throw error;
+  }
 };
