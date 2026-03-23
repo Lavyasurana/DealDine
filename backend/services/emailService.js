@@ -1,49 +1,51 @@
-import nodemailer from "nodemailer"
+import { Resend } from "resend";
 
-const transporter = nodemailer.createTransport({
-  service: "gmail",
-  auth: {
-    user: process.env.EMAIL,
-    pass: process.env.EMAIL_PASSWORD
-  }
-})
+const resend = new Resend(process.env.RESEND_API_KEY);
 
+// 🔥 Deal Email
 export const sendDealEmail = async (email, deal) => {
+  try {
+    const html = `
+      <h2>🔥 New Deal Available!</h2>
+      <p><b>Restaurant:</b> ${deal.resName}</p>
+      <p><b>Deal:</b> ${deal.dealName}</p>
+      <p>${deal.description}</p>
+      <p>Price: ₹${deal.price}</p>
+    `;
 
-  const html = `
-  <h2>🔥 New Deal Available!</h2>
-  <p><b>Restaurant:</b> ${deal.resName}</p>
-  <p><b>Deal:</b> ${deal.dealName}</p>
-  <p>${deal.description}</p>
-  <p>Price: ₹${deal.price}</p>
+    const response = await resend.emails.send({
+      from: "DealDine <noreply@dealdine.in>", // ✅ use domain
+      reply_to: "dealdine24@gmail.com",
+      to: email,
+      subject: "New Deal Available 🎉",
+      html,
+    });
 
-  
-  `
+    console.log("✅ Deal email sent:", response);
+  } catch (error) {
+    console.log("❌ Deal email failed:", error);
+  }
+};
 
-  await transporter.sendMail({
-    from: `"Deal Dine" <${process.env.EMAIL}>`,
-    to: email,
-    subject: "New Deal Available 🎉",
-    html
-  })
-}
-
+// 🔐 Verification Email
 export const sendVerificationEmail = async (email, token) => {
   try {
     const url = `${process.env.FRONTEND_URL}/verify/${token}`;
 
-    const info = await transporter.sendMail({
-      from: process.env.EMAIL,
+    const response = await resend.emails.send({
+      from: "DealDine <noreply@dealdine.in>", // ✅ use domain
+      reply_to: "dealdine24@gmail.com",
       to: email,
       subject: "Verify your email",
-      html: `<h2>Click below to verify your email</h2>
-             <a href="${url}">${url}</a>`
+      html: `
+        <h2>Click below to verify your email</h2>
+        <a href="${url}">${url}</a>
+      `,
     });
 
-    console.log("✅ Verification email sent:", info.response);
-
+    console.log("✅ Verification email sent:", response);
   } catch (error) {
-    console.log("❌ Email failed:", error.message);
+    console.log("❌ Email failed:", error);
     throw error;
   }
 };

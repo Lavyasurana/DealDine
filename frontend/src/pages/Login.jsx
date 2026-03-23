@@ -32,7 +32,12 @@ export function Login() {
     
                 if (response.data.success) {
                     toast.success("Check your email to verify your account 📩")
+                    setEmail('')
+                    setPassword('')
                     setCurrentState("Login");
+                }
+                else{
+                    toast.error(response.data.message)
                 }
     
             } else {
@@ -57,6 +62,8 @@ export function Login() {
                     navigate("/");
                 } else {
                     toast.error(response.data.message);
+                    setEmail('')
+                    setPassword('')
                 }
             }
     
