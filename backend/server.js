@@ -15,6 +15,7 @@ const PORT = process.env.PORT || 5111;
 
 connectDB();
 connectCloudinary();
+console.log(process.env.FIREBASE_PRIVATE_KEY);
 
 // ✅ Safe env handling
 const allowedOrigins = process.env.ALLOWED_ORIGINS
