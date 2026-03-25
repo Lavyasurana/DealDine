@@ -1,14 +1,39 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext,useEffect } from "react";
 import { Flame } from "lucide-react";
 import DiscountCard from "../components/DiscountCard";
 import top from "../assets/top.png";
 import { rescueContext } from "../context/rescueContext";
-
+import { getToken } from "firebase/messaging";
+import { messaging } from "../firebase/firebase";
 export default function Home() {
-  const { liveDeals, loading } = useContext(rescueContext);
+  const { liveDeals, loading,backendUrl,user,userLogin } = useContext(rescueContext);
 
   const [currentPage, setCurrentPage] = useState(1);
+  const[showBanner,setShowBanner]=useState(false);
   const dealsPerPage = 9;
+
+useEffect(() => {
+  const timer = setTimeout(() => {
+    // Only show if not already accepted/denied
+    if (Notification.permission === "default") {
+      setShowBanner(true);
+    }
+  }, 2000); // 10 sec delay
+
+  return () => clearTimeout(timer);
+}, [userLogin]);
+useEffect(() => {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker
+      .register("/firebase-messaging-sw.js")
+      .then((registration) => {
+        console.log("✅ SW registered:", registration);
+      })
+      .catch((err) => {
+        console.log("❌ SW failed:", err);
+      });
+  }
+}, []);
 
   // 🔥 LOADING STATE
   if (loading) {
@@ -45,6 +70,47 @@ export default function Home() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+ 
+
+
+
+
+  const handleEnableNotifications = async () => {
+    const permission = await Notification.requestPermission();
+  
+    if (permission === "granted") {
+      try {
+        // ✅ THIS WAS MISSING
+        const registration = await navigator.serviceWorker.ready;
+  
+        const fcmToken = await getToken(messaging, {
+          vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+          serviceWorkerRegistration: registration
+        });
+  
+        console.log("🔥 FCM Token:", fcmToken);
+  
+        const authToken = localStorage.getItem("token");
+  
+        await fetch(`${backendUrl}/api/user/save-token`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${authToken}`
+          },
+          body: JSON.stringify({ token: fcmToken })
+        });
+  
+        localStorage.setItem("fcmToken", fcmToken);
+  
+        setShowBanner(false);
+  
+      } catch (err) {
+        console.error("Error getting token:", err);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-100 pt-20 px-4 sm:px-6 py-10 text-gray-900">
       
@@ -58,6 +124,35 @@ export default function Home() {
           Discover hidden restaurant discounts before they disappear.
         </p>
       </div>
+      {userLogin && showBanner && (
+  <div className="max-w-3xl mx-auto mt-6 bg-white border border-emerald-200 shadow-md rounded-xl p-4 flex items-center justify-between gap-4">
+    
+    <div>
+      <p className="text-sm sm:text-base font-medium text-gray-800">
+        🔔 Never miss deals near you!
+      </p>
+      <p className="text-xs text-gray-500">
+        Get instant alerts when new offers drop 🔥
+      </p>
+    </div>
+
+    <div className="flex gap-2">
+      <button
+        onClick={handleEnableNotifications}
+        className="bg-emerald-600 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700"
+      >
+        Enable
+      </button>
+
+      <button
+        onClick={() => setShowBanner(false)}
+        className="text-gray-500 text-sm px-2"
+      >
+        ✕
+      </button>
+    </div>
+  </div>
+)}
 
       {/* Banner Section */}
       <div

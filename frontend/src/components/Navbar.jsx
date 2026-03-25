@@ -7,7 +7,7 @@ import logo from '../assets/logo.png'
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isUserOpen, setIsUserOpen] = useState(false);
-  const { userLogin, setUserLogin, logout } = useContext(rescueContext);
+  const { userLogin, setUserLogin, logout,backendUrl } = useContext(rescueContext);
   const userRef = useRef();
   const navigate = useNavigate();
 
@@ -25,13 +25,24 @@ export default function Navbar() {
   }, []);
 
   // Logout function
-  const handleLogout = () => {
+  const handleLogout = async() => {
     setUserLogin(false); // update context
     setIsUserOpen(false);
     setIsOpen(false);
     navigate("/");
     logout();
+    const fcmToken = localStorage.getItem("fcmToken");
+    const authToken = localStorage.getItem("token");
+    await fetch(`${backendUrl}/api/user/remove-token`, {
+      method: "POST",
+      body: JSON.stringify({ token:fcmToken }),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken}`
+      }
+    });
   };
+  
 
   return (
     <nav className="w-full bg-white/80 backdrop-blur-md border-b border-gray-200 fixed top-0 left-0 z-50">

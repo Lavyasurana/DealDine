@@ -158,5 +158,20 @@ export const adminProfile = async (req, res) => {
   }
 };
 
+export const getAllAdmin=async(req,res)=>{
+  try{
+    const admins = await adminModel.find({})
+    .select("-name -email -password -createdAt -lastLogin");
+  console.log(admins)
+  if(admins){
+    res.json({success:true,admins:admins})
+  }
+
+  }catch(error){
+    res.json({success:false,error})
+  }
+
+
+}
 
 

@@ -5,6 +5,8 @@ import userModel from "../models/userModel.js"
 import { sendDealEmail } from "../services/emailService.js"
 
 import adminModel from "../models/adminModel.js";
+import NotiTokenModel from "../models/NotiToken.js";
+import admin from "../config/firebase.js";
 
 
 
@@ -13,7 +15,7 @@ const addDeal = async (req, res) => {
     const adminId = req.user.id;
 
     // ✅ 1. Fetch admin details
-    const admin = await adminModel.findById(adminId);
+    const Admin = await adminModel.findById(adminId);
 
     if (!admin) {
       return res.json({
@@ -28,13 +30,58 @@ const addDeal = async (req, res) => {
       admin: adminId,
 
       // inject from admin
-      resName: admin.restaurantName,
-      location: admin.location,
-      town: admin.town,
-      image: admin.imageUrl
+      resName: Admin.restaurantName,
+      location: Admin.location,
+      town: Admin.town,
+      image: Admin.imageUrl
     });
 
     await deal.save();
+
+    const tokens = await NotiTokenModel.find();
+
+let successCount = 0;
+let failureCount = 0;
+
+await Promise.all(
+  tokens.map(async (t) => {
+    try {
+      await admin.messaging().send({
+        token: t.token,
+        notification: {
+          title: "🔥 New Deal Available!",
+          body: `${deal.resName}: ${deal.dealName}`
+        },
+        webpush: {
+          fcmOptions: {
+            link: `http://localhost:5173/deal/${deal._id}`
+          }
+        }
+      });
+
+      successCount++; // ✅ success
+
+    } catch (err) {
+      failureCount++; // ❌ failure
+
+      console.log("❌ Push error:", err.message);
+
+      // remove invalid tokens
+      if (
+        err.code === "messaging/registration-token-not-registered"
+      ) {
+        await NotiTokenModel.deleteOne({ token: t.token });
+      }
+    }
+  })
+);
+
+// 🔥 FINAL LOG
+console.log("🔔 Notifications Summary:");
+console.log("✅ Success:", successCount);
+console.log("❌ Failed:", failureCount);
+console.log("👥 Total Tokens:", tokens.length);
+
 
     // ✅ 3. Fetch users
     const users = await userModel.find();

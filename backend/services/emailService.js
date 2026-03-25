@@ -21,7 +21,7 @@ export const sendDealEmail = async (email, deal) => {
       html,
     });
 
-    console.log("✅ Deal email sent:", response);
+    
   } catch (error) {
     console.log("❌ Deal email failed:", error);
   }
