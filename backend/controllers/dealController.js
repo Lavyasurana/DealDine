@@ -13,6 +13,7 @@ import admin from "../config/firebase.js";
 const addDeal = async (req, res) => {
   try {
     const adminId = req.user.id;
+    const { maxRedemptions, ...dealData } = req.body;
 
     // ✅ 1. Fetch admin details
     const Admin = await adminModel.findById(adminId);
@@ -24,10 +25,28 @@ const addDeal = async (req, res) => {
       });
     }
 
+    const parsedMaxRedemptions =
+      maxRedemptions === undefined || maxRedemptions === null || maxRedemptions === ""
+        ? undefined
+        : Number(maxRedemptions);
+
+    if (
+      parsedMaxRedemptions !== undefined &&
+      (!Number.isInteger(parsedMaxRedemptions) || parsedMaxRedemptions < 1)
+    ) {
+      return res.json({
+        success: false,
+        message: "Total claim limit must be a positive whole number"
+      });
+    }
+
     // ✅ 2. Create deal with admin data
     const deal = new dealModel({
-      ...req.body,
+      ...dealData,
       admin: adminId,
+      ...(parsedMaxRedemptions !== undefined
+        ? { maxRedemptions: parsedMaxRedemptions }
+        : {}),
 
       // inject from admin
       resName: Admin.restaurantName,

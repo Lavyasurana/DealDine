@@ -49,3 +49,28 @@ export const sendVerificationEmail = async (email, token) => {
     throw error;
   }
 };
+
+export const sendContactEmail = async ({ name, email, message }) => {
+  try {
+    const html = `
+      <h2>📩 New Contact Message</h2>
+      <p><b>Name:</b> ${name}</p>
+      <p><b>Email:</b> ${email}</p>
+      <p><b>Message:</b></p>
+      <p>${message}</p>
+    `;
+
+    const response = await resend.emails.send({
+      from: "DealDine <noreply@dealdine.in>",
+      reply_to: email, // 👈 important (so you can reply directly)
+      to: "dealdine24@gmail.com", // 👈 YOU receive message
+      subject: `New Contact from ${name}`,
+      html,
+    });
+
+    console.log("✅ Contact email sent:", response);
+  } catch (error) {
+    console.log("❌ Contact email failed:", error);
+    throw error;
+  }
+};

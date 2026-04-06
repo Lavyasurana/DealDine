@@ -1,11 +1,31 @@
 import UserCoupon from "../models/userCouponModel.js";
+import dealModel from "../models/dealModel.js";
 
+const hasReachedClaimLimit = async (dealId, maxRedemptions) => {
+  const totalClaims = await UserCoupon.countDocuments({ deal: dealId });
+  return totalClaims >= maxRedemptions;
+};
 
 export const createCoupon = async (req, res) => {
   try {
     const { dealId } = req.body;
 
     const userId = req.user.id; // from authMiddleware
+    const deal = await dealModel.findById(dealId);
+
+    if (!deal) {
+      return res.status(404).json({
+        success: false,
+        message: "Deal not found"
+      });
+    }
+
+    if (await hasReachedClaimLimit(dealId, deal.maxRedemptions)) {
+      return res.status(400).json({
+        success: false,
+        message: "This deal is no longer available"
+      });
+    }
 
     // Prevent duplicate purchase
     const existing = await UserCoupon.findOne({

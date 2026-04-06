@@ -4,6 +4,11 @@ import userModel from "../models/userModel.js";
 import dealModel from "../models/dealModel.js";
 import UserCoupon from "../models/userCouponModel.js";
 
+const hasReachedClaimLimit = async (dealId, maxRedemptions) => {
+  const totalClaims = await UserCoupon.countDocuments({ deal: dealId });
+  return totalClaims >= maxRedemptions;
+};
+
 // ================= CREATE ORDER =================
 export const getOrder = async (req, res) => {
   try {
@@ -78,6 +83,13 @@ export const validateOrder = async (req, res) => {
           message: "Deal not found",
         });
       }
+
+      if (await hasReachedClaimLimit(dealId, deal.maxRedemptions)) {
+        return res.json({
+          success: false,
+          message: "This deal is no longer available",
+        });
+      }
   
       // 🚫 Prevent duplicate coupon
       const existing = await UserCoupon.findOne({
@@ -131,6 +143,13 @@ export const payWithCredits = async (req, res) => {
       return res.json({
         success: false,
         message: "Invalid user or deal",
+      });
+    }
+
+    if (await hasReachedClaimLimit(dealId, deal.maxRedemptions)) {
+      return res.json({
+        success: false,
+        message: "This deal is no longer available",
       });
     }
 

@@ -9,13 +9,14 @@ import Couponrouter from './routers/userCouponRouter.js';
 import adminRouter from './routers/adminRouter.js';
 import helmet from "helmet";
 import { connectCloudinary } from './config/cloudinary.js';
+import paymentRouter from './routers/paymentRouter.js';
 
 const app = express();
 const PORT = process.env.PORT || 5111;
 
 connectDB();
 connectCloudinary();
-console.log(process.env.FIREBASE_PRIVATE_KEY);
+
 
 // ✅ Safe env handling
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -52,6 +53,7 @@ app.use('/api/user', userRouter);
 app.use('/payment', payRouter);
 app.use('/coupon', Couponrouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/payment', paymentRouter);
 
 // ✅ Health check (VERY IMPORTANT for UptimeRobot)
 app.get('/', (req, res) => {
