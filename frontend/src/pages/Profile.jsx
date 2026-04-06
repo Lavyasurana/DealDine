@@ -9,7 +9,7 @@ export function Profile() {
   const [coupons, setCoupons] = useState([]);
   const [user, setUser] = useState(null);
 
-  const { backendUrl,userCredits } = useContext(rescueContext);
+  const { backendUrl,userCredits, clearAuthState, navigate } = useContext(rescueContext);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -32,11 +32,16 @@ export function Profile() {
         }
       } catch (error) {
         console.log(error.response?.data);
+
+        if (error.response?.status === 401) {
+          clearAuthState();
+          navigate("/login");
+        }
       }
     };
 
     fetchData();
-  }, []);
+  }, [backendUrl, clearAuthState, navigate]);
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200">

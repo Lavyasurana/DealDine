@@ -13,6 +13,13 @@ const RescueProvider = (props) => {
     const[liveDeals,setLiveDeals]=useState([])
     const [user, setUser] = useState(null);
 
+    const clearAuthState = () => {
+      localStorage.removeItem("token");
+      delete axios.defaults.headers.common["Authorization"];
+      setUserLogin(false);
+      setUser(null);
+    };
+
     useEffect(() => {
       const initAuth = async () => {
         const token = localStorage.getItem("token");
@@ -37,22 +44,15 @@ const RescueProvider = (props) => {
           console.log("Token invalid or expired");
     
           // ❌ remove bad token
-          localStorage.removeItem("token");
-          delete axios.defaults.headers.common["Authorization"];
-    
-          setUserLogin(false);
-          setUser(null);
+          clearAuthState();
         }
       };
     
       initAuth();
-    }, []);
+    }, [backendUrl]);
 
     const logout = () => {
-        localStorage.removeItem("token");
-        delete axios.defaults.headers.common["Authorization"];
-        setUserLogin(false);
-        setUser(null);
+        clearAuthState();
         navigate("/");
     };
 
@@ -84,17 +84,6 @@ const RescueProvider = (props) => {
         }
       };
 
-      useEffect(() => {
-        const token = localStorage.getItem("token");
-      
-        if (token) {
-          setUserLogin(true);
-          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-      
-          getUser();
-        }
-      }, []);
-
     const value = {
         liveDeals,
         backendUrl,
@@ -104,7 +93,8 @@ const RescueProvider = (props) => {
         logout,
         userCredits: user?.credits || 0 ,
         setUser  ,
-        getUser
+        getUser,
+        clearAuthState
     };
 
 
