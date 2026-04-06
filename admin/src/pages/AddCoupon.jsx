@@ -13,7 +13,7 @@ const AddCoupon = () => {
     dealName:"",
     description:"",
     price:"",
-  
+    maxRedemptions:"",
     validFrom:"",
     validTill:"",
     
@@ -31,7 +31,10 @@ const AddCoupon = () => {
     try{
       const res = await axios.post(
         `${backendUrl}/api/deals/addDeal`,
-        data,
+        {
+          ...data,
+          maxRedemptions: data.maxRedemptions === "" ? undefined : Number(data.maxRedemptions),
+        },
         {
           withCredentials: true //  IMPORTANT for jwt
         }
@@ -47,7 +50,7 @@ const AddCoupon = () => {
           dealName:"",
           description:"",
           price:"",
-         
+          maxRedemptions:"",
           validFrom:"",
           validTill:"",
           
@@ -98,6 +101,16 @@ const AddCoupon = () => {
           value={data.price}
           onChange={handleChange}
           required
+          className="border p-2 rounded"
+        />
+
+        <input
+          type="number"
+          name="maxRedemptions"
+          placeholder="Total claim limit (optional). Use 1 for one-time total"
+          value={data.maxRedemptions}
+          onChange={handleChange}
+          min="1"
           className="border p-2 rounded"
         />
 

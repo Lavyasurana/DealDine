@@ -76,6 +76,8 @@ export function Terms() {
             verify deal availability before visiting.
             <br /><br />
             Coupons cannot be resold, transferred, or reused once redeemed.
+            <br></br>
+            Can not use multile coupons on one bill.
           </p>
         </section>
 

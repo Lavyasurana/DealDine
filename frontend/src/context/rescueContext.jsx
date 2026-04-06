@@ -14,12 +14,38 @@ const RescueProvider = (props) => {
     const [user, setUser] = useState(null);
 
     useEffect(() => {
+      const initAuth = async () => {
         const token = localStorage.getItem("token");
-
-        if (token) {
+    
+        if (!token) return;
+    
+        try {
+          // set header
+          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    
+          // 🔥 verify token by calling backend
+          const res = await axios.get(`${backendUrl}/api/user/me`);
+    
+          if (res.data.success) {
+            setUser(res.data.user);
             setUserLogin(true);
-            axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+          } else {
+            throw new Error("Invalid token");
+          }
+    
+        } catch (err) {
+          console.log("Token invalid or expired");
+    
+          // ❌ remove bad token
+          localStorage.removeItem("token");
+          delete axios.defaults.headers.common["Authorization"];
+    
+          setUserLogin(false);
+          setUser(null);
         }
+      };
+    
+      initAuth();
     }, []);
 
     const logout = () => {

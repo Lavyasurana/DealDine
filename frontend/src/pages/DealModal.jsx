@@ -5,6 +5,8 @@ import { rescueContext } from "../context/rescueContext";
 import DiscountCard from "../components/DiscountCard";
 import { toast } from "react-toastify";
 import axios from "axios";
+import QRCode from "qrcode";
+
 
 export function DealModal() {
   const { dealId } = useParams();
@@ -14,6 +16,8 @@ export function DealModal() {
 
   const [open, setOpen] = useState(false);
   const [loadingCredits, setLoadingCredits] = useState(false);
+  const [qrCode, setQrCode] = useState("");
+const [showQR, setShowQR] = useState(false);
 
   const deal = liveDeals.find((d) => d._id === dealId);
 
@@ -32,6 +36,49 @@ export function DealModal() {
   const amount = deal.price * 100;
   const currency = "INR";
   const receiptId = "receipt_" + Date.now();
+
+  // ================UPI PAYMENT=================
+  const upiPaymentHandler = async (e) => {
+    e.preventDefault();
+  
+    const token = localStorage.getItem("token");
+    if (!token) {
+      toast.error("Please login first");
+      return navigate("/login");
+    }
+  
+    const upiId = "lavyasurana14@okhdfcbank";
+    const payeeName = "DealDine";
+    const transactionNote = `Deal for ${deal.resName}`;
+    const amount = deal.price;
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  
+    const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(
+      payeeName
+    )}&tn=${encodeURIComponent(transactionNote)}&am=${amount}&cu=INR`;
+  
+    if (isMobile) {
+      // ✅ Open UPI app
+      window.location.href = upiUrl;
+  
+      toast.info("Opening UPI App...");
+  
+      // Redirect to verification page (manual)
+      setTimeout(() => {
+        navigate(`/verify-payment/${dealId}`);
+      }, 5000);
+    } else {
+      // ✅ Desktop → Generate QR
+      try {
+        const qr = await QRCode.toDataURL(upiUrl);
+        setQrCode(qr);
+        setShowQR(true);
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to generate QR");
+      }
+    }
+  };
 
   // ================= RAZORPAY =================
   const paymentHandler = async (e) => {
@@ -190,7 +237,7 @@ export function DealModal() {
 
               {/* Razorpay */}
               <button
-                onClick={paymentHandler}
+                onClick={upiPaymentHandler}
                 className="w-full bg-black text-white py-3 rounded-xl hover:bg-gray-800 transition"
               >
                 Pay Online
@@ -269,6 +316,36 @@ export function DealModal() {
           </div>
         )}
       </div>
+      {showQR && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white p-6 rounded-2xl text-center w-80">
+      <h2 className="text-xl font-semibold mb-4">Scan & Pay</h2>
+
+      <img src={qrCode} alt="UPI QR" className="mx-auto mb-4" />
+
+      <p className="text-sm text-gray-600 mb-4">
+        Scan this QR using any UPI app
+      </p>
+
+      <button
+        onClick={() => {
+          setShowQR(false);
+          navigate(`/verify-payment/${dealId}`);
+        }}
+        className="w-full bg-black text-white py-2 rounded-lg"
+      >
+        I have paid
+      </button>
+
+      <button
+        onClick={() => setShowQR(false)}
+        className="mt-2 text-sm text-gray-500"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+)}
     </div>
   );
 }

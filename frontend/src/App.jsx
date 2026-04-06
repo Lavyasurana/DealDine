@@ -21,6 +21,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import { RefundPolicy } from './pages/Refund'
 import Verify from './pages/verify'
+import { VerifyPayment } from './pages/VerifyPayment'
 function App() {
 
 
@@ -59,6 +60,7 @@ function App() {
           <Route path='/reset-password/:token' element={<ResetPassword/>}/>
           <Route path="/refund" element={<RefundPolicy/>}/>
           <Route path="/verify/:token" element={<Verify />} />
+          <Route path="/verify-payment/:dealId" element={<VerifyPayment/>}/>
           </Routes>
         </div>
         <Footer/>

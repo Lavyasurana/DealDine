@@ -13,6 +13,7 @@ export function Login() {
     const [password, setPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
     const [currentState, setCurrentState] = useState('Sign Up')
+    const [agreeTerms, setAgreeTerms] = useState(false);
 
     const { backendUrl, navigate, setUserLogin,getUser } = useContext(rescueContext);
     const onSubmitHandler = async (event) => {
@@ -91,13 +92,26 @@ export function Login() {
                     <input required onChange={(e) => { setPhone(e.target.value) }} name='phone' value={phone} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="number" placeholder='Phone' />
                     <input required onChange={(e) => { setPassword(e.target.value) }} name='password' value={password} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="password" placeholder='Password' />
                     <input required onChange={(e) => { setConfirmPassword(e.target.value) }} name='confirmPassword' value={confirmPassword} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="password" placeholder='Confirm Password' />
-                    <div className='w-full flex justify-between text-sm mt-[-8px]'>
-                        <p className=' cursor-pointer'>Forgot your password?</p>
-
-                        <p onClick={() => setCurrentState('Login')} className=' cursor-pointer'>Login Here</p>
-
-                    </div>
+                    <div className="flex items-center gap-2 text-sm mt-2">
+    <input
+        type="checkbox"
+        checked={agreeTerms}
+        onChange={(e) => setAgreeTerms(e.target.checked)}
+    />
+    <p>
+        I agree to the{" "}
+        <Link to="/terms" className="text-emerald-600 underline">
+            Terms & Conditions
+        </Link>
+    </p>
+</div>
                     <button onClick={onSubmitHandler} className='bg-black text-white font-light px-8 py-2 mt-4 bg-emerald-600'>Register</button>
+                    <div className='w-full flex justify-between text-sm mt-[-8px]'>
+                    
+
+                    <p onClick={() => setCurrentState('Login')} className=' cursor-pointer text-emerald-600'>Login Here</p>
+
+                </div>
 
 
                 </div> :

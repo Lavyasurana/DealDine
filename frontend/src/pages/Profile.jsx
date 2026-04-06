@@ -31,7 +31,7 @@ export function Profile() {
           setCoupons(couponRes.data.coupons);
         }
       } catch (error) {
-        console.error(error);
+        console.log(error.response?.data);
       }
     };
 

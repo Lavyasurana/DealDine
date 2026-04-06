@@ -17,9 +17,7 @@ export function Upcoming() {
       return dealDate > today;
     }) || [];
 
-  useEffect(() => {
-    console.log("Upcoming Deals:", upcomingDeals);
-  }, [upcomingDeals]);
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-100 px-6 py-24">

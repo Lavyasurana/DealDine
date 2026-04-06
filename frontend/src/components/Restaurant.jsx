@@ -3,7 +3,7 @@ import { Link } from "react-router-dom"
 export function Restaurant({admin}){
 
 return(
-    <Link  >
+   <div>
     <div className="flex justify-between items-start gap-4">
 
       <div>
@@ -26,6 +26,6 @@ return(
     <button className="mt-4 w-full bg-emerald-600 text-white py-2 rounded-xl hover:bg-emerald-700 transition">
       View All deals on search
     </button>
-  </Link>
+    </div>
 )
 }

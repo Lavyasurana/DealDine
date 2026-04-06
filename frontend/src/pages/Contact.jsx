@@ -117,7 +117,7 @@ export function Contact() {
               <div className="bg-emerald-100 p-3 rounded-xl">
                 <Mail className="text-emerald-600"/>
               </div>
-              rescue.deals24@gmail.com
+              dealdine24@gmail.com
             </div>
 
             <div className="flex items-center gap-4">
@@ -127,12 +127,7 @@ export function Contact() {
               Mumbai, India
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="bg-emerald-100 p-3 rounded-xl">
-                <Phone className="text-emerald-600"/>
-              </div>
-              +91 XXXXX XXXXX
-            </div>
+           
 
           </div>
         </div>
