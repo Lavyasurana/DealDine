@@ -38,7 +38,7 @@ export function DealModal() {
   const currency = "INR";
   const receiptId = "receipt_" + Date.now();
 
-  const upiId = "lavyasurana14@okhdfcbank";
+  const upiId = "choudharimahi8@okicici";
   const payeeName = "DealDine";
   const transactionNote = `Deal for ${deal.resName}`;
   const buildUpiUrl = (scheme = "upi://pay") => {
