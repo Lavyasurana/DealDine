@@ -18,7 +18,7 @@ const addDeal = async (req, res) => {
     // ✅ 1. Fetch admin details
     const Admin = await adminModel.findById(adminId);
 
-    if (!admin) {
+    if (!Admin) {
       return res.json({
         success: false,
         message: "Admin not found"

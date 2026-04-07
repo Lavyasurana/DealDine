@@ -4,7 +4,6 @@ import connectDB from './config/MongoDbCon.js';
 import 'dotenv/config';
 import dealRouter from './routers/dealRouter.js';
 import userRouter from './routers/userRoute.js';
-import payRouter from './routers/razorpayRoute.js';
 import Couponrouter from './routers/userCouponRouter.js';
 import adminRouter from './routers/adminRouter.js';
 import helmet from "helmet";
@@ -44,13 +43,16 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 app.use(cors(corsOptions));
 
 
-app.use(express.json());
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    req.rawBody = buf.toString("utf8");
+  }
+}));
 app.use(helmet());
 
 // Routes
 app.use('/api/deals', dealRouter);
 app.use('/api/user', userRouter);
-app.use('/payment', payRouter);
 app.use('/coupon', Couponrouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/payment', paymentRouter);

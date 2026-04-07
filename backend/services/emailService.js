@@ -27,25 +27,23 @@ export const sendDealEmail = async (email, deal) => {
   }
 };
 
-// 🔐 Verification Email
-export const sendVerificationEmail = async (email, token) => {
+export const sendVerificationOtpEmail = async (email, otp) => {
   try {
-    const url = `${process.env.FRONTEND_URL}/verify/${token}`;
-
     const response = await resend.emails.send({
-      from: "DealDine <noreply@dealdine.in>", // ✅ use domain
+      from: "DealDine <noreply@dealdine.in>",
       reply_to: "dealdine24@gmail.com",
       to: email,
-      subject: "Verify your email",
+      subject: "Your DealDine verification code",
       html: `
-        <h2>Click below to verify your email</h2>
-        <a href="${url}">${url}</a>
+        <h2>Your verification code is ${otp}</h2>
+        <p>This OTP will expire in 10 minutes.</p>
+        <p>If you did not request this, you can ignore this email.</p>
       `,
     });
 
-    console.log("✅ Verification email sent:", response);
+    console.log("✅ Verification OTP email sent:", response);
   } catch (error) {
-    console.log("❌ Email failed:", error);
+    console.log("❌ OTP email failed:", error);
     throw error;
   }
 };

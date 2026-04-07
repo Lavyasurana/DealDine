@@ -9,6 +9,7 @@ const RescueProvider = (props) => {
 
     const backendUrl =import.meta.env.VITE_backend_Url;
     const [userLogin, setUserLogin] = useState(false);
+    const [authReady, setAuthReady] = useState(false);
     const navigate = useNavigate();
     const[liveDeals,setLiveDeals]=useState([])
     const [user, setUser] = useState(null);
@@ -24,7 +25,10 @@ const RescueProvider = (props) => {
       const initAuth = async () => {
         const token = localStorage.getItem("token");
     
-        if (!token) return;
+        if (!token) {
+          setAuthReady(true);
+          return;
+        }
     
         try {
           // set header
@@ -45,6 +49,8 @@ const RescueProvider = (props) => {
     
           // ❌ remove bad token
           clearAuthState();
+        } finally {
+          setAuthReady(true);
         }
       };
     
@@ -89,6 +95,7 @@ const RescueProvider = (props) => {
         backendUrl,
         navigate,
         userLogin,
+        authReady,
         setUserLogin,
         logout,
         userCredits: user?.credits || 0 ,

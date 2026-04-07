@@ -54,7 +54,8 @@ export function Privacy() {
           </h2>
           <p className="text-gray-700">
             Payments are processed through third-party providers such as
-            Razorpay. DealDine does not store your card or banking details.
+            UPI apps and payment providers. DealDine does not store your card or
+            banking details.
           </p>
         </section>
 

@@ -1,15 +1,16 @@
 import express from 'express'
-import { userLogin, userRegister ,getCurrentUser,forgotPassword,resetPassword, verifyUser, sendContact} from '../controllers/userController.js';
+import { userLogin, userRegister ,verifySignupOtp,resendSignupOtp,getCurrentUser,forgotPassword,resetPassword, sendContact} from '../controllers/userController.js';
 import { authMiddleware } from '../middleware/authmiddleware.js';
 import NotiTokenModel from '../models/NotiToken.js';
 const userRouter=express.Router();
 
 userRouter.post('/login',userLogin)
 userRouter.post('/register',userRegister)
+userRouter.post('/verify-otp',verifySignupOtp)
+userRouter.post('/resend-otp',resendSignupOtp)
 userRouter.get('/me', authMiddleware, getCurrentUser);
 userRouter.post('/forgot-password', forgotPassword);
 userRouter.post('/reset-password', resetPassword);
-userRouter.get('/verify/:token',verifyUser)
 userRouter.post("/contact", sendContact);
 
 

@@ -1,7 +1,7 @@
-import { useContext, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { rescueContext } from "../context/rescueContext";
 import axios from 'axios'
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'react-toastify';
 import { Link } from "react-router-dom";
 
 export function Login() {
@@ -14,16 +14,96 @@ export function Login() {
     const [confirmPassword, setConfirmPassword] = useState('')
     const [currentState, setCurrentState] = useState('Sign Up')
     const [agreeTerms, setAgreeTerms] = useState(false);
+    const [otp, setOtp] = useState('');
+    const [showOtpStep, setShowOtpStep] = useState(false);
+    const [resendCooldown, setResendCooldown] = useState(0);
 
     const { backendUrl, navigate, setUserLogin,getUser } = useContext(rescueContext);
+
+    const switchToLogin = () => {
+        setCurrentState('Login');
+        setShowOtpStep(false);
+        setOtp('');
+        setResendCooldown(0);
+    };
+
+    const resetSignupForm = () => {
+        setFirstName('');
+        setLastName('');
+        setEmail('');
+        setPhone('');
+        setUserId('');
+        setPassword('');
+        setConfirmPassword('');
+        setAgreeTerms(false);
+        setOtp('');
+        setShowOtpStep(false);
+        setResendCooldown(0);
+    };
+
+    const completeLogin = async (token) => {
+        localStorage.setItem("token", token);
+        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        setUserLogin(true);
+        await getUser();
+        navigate("/");
+    };
+
+    const startResendCooldown = () => {
+        setResendCooldown(60);
+    };
+
+    const resendOtp = async () => {
+        try {
+            const response = await axios.post(
+                `${backendUrl}/api/user/resend-otp`,
+                { email }
+            );
+
+            if (response.data.success) {
+                toast.success("A new OTP has been sent");
+                startResendCooldown();
+            } else {
+                toast.error(response.data.message);
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Failed to resend OTP");
+        }
+    };
+
+    const onResendClick = async () => {
+        if (resendCooldown > 0) return;
+        await resendOtp();
+    };
+
     const onSubmitHandler = async (event) => {
         event.preventDefault();
     
         try {
             if (currentState === 'Sign Up') {
+                if (showOtpStep) {
+                    const response = await axios.post(
+                        `${backendUrl}/api/user/verify-otp`,
+                        { email, otp }
+                    );
+
+                    if (response.data.success) {
+                        await completeLogin(response.data.token);
+                        toast.success("Account created successfully");
+                        resetSignupForm();
+                    } else {
+                        toast.error(response.data.message);
+                    }
+
+                    return;
+                }
     
                 if (password !== confirmPassword) {
                     return toast.error("Passwords do not match");
+                }
+
+                if (!agreeTerms) {
+                    return toast.error("Please accept the Terms & Conditions");
                 }
     
                 const response = await axios.post(
@@ -32,10 +112,10 @@ export function Login() {
                 );
     
                 if (response.data.success) {
-                    toast.success("Check your email to verify your account 📩")
-                    setEmail('')
-                    setPassword('')
-                    setCurrentState("Login");
+                    toast.success("Check your email for the OTP 📩")
+                    setOtp('');
+                    setShowOtpStep(true);
+                    startResendCooldown();
                 }
                 else{
                     toast.error(response.data.message)
@@ -50,17 +130,9 @@ export function Login() {
     
                 if (response.data.success) {
     
-                    const token = response.data.token;
-    
-                    localStorage.setItem("token", token);
-                    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    
-                    setUserLogin(true);
-                    await getUser()
+                    await completeLogin(response.data.token);
     
                     toast.success("Successfully logged in");
-    
-                    navigate("/");
                 } else {
                     toast.error(response.data.message);
                     setEmail('')
@@ -75,41 +147,96 @@ export function Login() {
             );
         }
     };
+
+    useEffect(() => {
+        if (resendCooldown <= 0) return;
+
+        const timer = setInterval(() => {
+            setResendCooldown((current) => {
+                if (current <= 1) {
+                    clearInterval(timer);
+                    return 0;
+                }
+
+                return current - 1;
+            });
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [resendCooldown]);
+
     return (
         <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">{
             currentState === 'Sign Up' ?
                 <div className='flex flex-col gap-4 w-full sm:max-w-[480px] bg-white p-6 rounded-xl shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300'>
-                    <h1 className='text-2xl font-bold items-center text-emerald-700'>Create your account</h1>
-                    <div className='flex gap-3'>
-                        <input required onChange={(e) => setFirstName(e.target.value)} name='firstName' value={firstName} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='First name' />
-                        <input required onChange={(e) => { setLastName(e.target.value) }} name='lastName' value={lastName} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='Last name' />
-                    </div>
-                    <input required onChange={(e) => setUserId(e.target.value)} name='userId' value={userId} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='User Id' />
+                    <h1 className='text-2xl font-bold items-center text-emerald-700'>
+                        {showOtpStep ? 'Verify your email' : 'Create your account'}
+                    </h1>
 
-
-                    <input required onChange={(e) => { setEmail(e.target.value) }} name='email' value={email} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="email" placeholder='Email address' />
-
-                    <input required onChange={(e) => { setPhone(e.target.value) }} name='phone' value={phone} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="number" placeholder='Phone' />
-                    <input required onChange={(e) => { setPassword(e.target.value) }} name='password' value={password} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="password" placeholder='Password' />
-                    <input required onChange={(e) => { setConfirmPassword(e.target.value) }} name='confirmPassword' value={confirmPassword} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="password" placeholder='Confirm Password' />
-                    <div className="flex items-center gap-2 text-sm mt-2">
-    <input
-        type="checkbox"
-        checked={agreeTerms}
-        onChange={(e) => setAgreeTerms(e.target.checked)}
-    />
-    <p>
-        I agree to the{" "}
-        <Link to="/terms" className="text-emerald-600 underline">
-            Terms & Conditions
-        </Link>
-    </p>
-</div>
-                    <button onClick={onSubmitHandler} className='bg-black text-white font-light px-8 py-2 mt-4 bg-emerald-600'>Register</button>
+                    {showOtpStep ? (
+                        <>
+                            <p className="text-sm text-gray-600">
+                                Enter the 6-digit OTP sent to {email}.
+                            </p>
+                            <input
+                                required
+                                onChange={(e) => setOtp(e.target.value)}
+                                value={otp}
+                                className='border border-gray-300 rounded py-1.5 px-3.5 w-full'
+                                type="text"
+                                inputMode="numeric"
+                                maxLength={6}
+                                placeholder='Enter OTP'
+                            />
+                            <button onClick={onSubmitHandler} className='bg-black text-white font-light px-8 py-2 mt-4 bg-emerald-600'>
+                                Verify OTP
+                            </button>
+                            <div className="flex justify-between text-sm">
+                                <p
+                                    onClick={onResendClick}
+                                    className={`cursor-pointer ${resendCooldown > 0 ? "text-gray-400" : "text-emerald-600"}`}
+                                >
+                                    {resendCooldown > 0
+                                        ? `Resend OTP in ${resendCooldown}s`
+                                        : "Resend OTP"}
+                                </p>
+                                <p
+                                    onClick={() => setShowOtpStep(false)}
+                                    className='cursor-pointer text-emerald-600'
+                                >
+                                    Edit signup details
+                                </p>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <div className='flex gap-3'>
+                                <input required onChange={(e) => setFirstName(e.target.value)} name='firstName' value={firstName} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='First name' />
+                                <input required onChange={(e) => { setLastName(e.target.value) }} name='lastName' value={lastName} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='Last name' />
+                            </div>
+                            <input required onChange={(e) => setUserId(e.target.value)} name='userId' value={userId} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="text" placeholder='User Id' />
+                            <input required onChange={(e) => { setEmail(e.target.value) }} name='email' value={email} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="email" placeholder='Email address' />
+                            <input required onChange={(e) => { setPhone(e.target.value) }} name='phone' value={phone} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="number" placeholder='Phone' />
+                            <input required onChange={(e) => { setPassword(e.target.value) }} name='password' value={password} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="password" placeholder='Password' />
+                            <input required onChange={(e) => { setConfirmPassword(e.target.value) }} name='confirmPassword' value={confirmPassword} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="password" placeholder='Confirm Password' />
+                            <div className="flex items-center gap-2 text-sm mt-2">
+                                <input
+                                    type="checkbox"
+                                    checked={agreeTerms}
+                                    onChange={(e) => setAgreeTerms(e.target.checked)}
+                                />
+                                <p>
+                                    I agree to the{" "}
+                                    <Link to="/terms" className="text-emerald-600 underline">
+                                        Terms & Conditions
+                                    </Link>
+                                </p>
+                            </div>
+                            <button onClick={onSubmitHandler} className='bg-black text-white font-light px-8 py-2 mt-4 bg-emerald-600'>Register</button>
+                        </>
+                    )}
                     <div className='w-full flex justify-between text-sm mt-[-8px]'>
-                    
-
-                    <p onClick={() => setCurrentState('Login')} className=' cursor-pointer text-emerald-600'>Login Here</p>
+                    <p onClick={switchToLogin} className=' cursor-pointer text-emerald-600'>Login Here</p>
 
                 </div>
 

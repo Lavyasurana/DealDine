@@ -1,19 +1,41 @@
 import userModel from "../models/userModel.js";
+import PendingSignup from "../models/pendingSignupModel.js";
 import validator from 'validator'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
 import nodemailer from "nodemailer";
-import { sendVerificationEmail } from "../services/emailService.js";
-import crypto from "crypto";
+import { sendContactEmail, sendVerificationOtpEmail } from "../services/emailService.js";
+
 const createToken=async(id)=>{
     const token= jwt.sign({id},process.env.JWT_SECRET_KEY, { expiresIn: "1d" })
     return token;
 
 }
+
+const generateOtp = () => `${Math.floor(100000 + Math.random() * 900000)}`;
+const OTP_EXPIRY_MS = 10 * 60 * 1000;
+const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
+const OTP_MAX_ATTEMPTS = 5;
+const OTP_BLOCK_MS = 10 * 60 * 1000;
+
+const normalizeEmail = (email = "") => email.toLowerCase().trim();
+
+const buildOtpPayload = () => {
+  const now = new Date();
+  return {
+    otp: generateOtp(),
+    otpExpiresAt: new Date(now.getTime() + OTP_EXPIRY_MS),
+    otpLastSentAt: now,
+    otpAttempts: 0,
+    verificationBlockedUntil: null
+  };
+};
+
 const userLogin=async(req,res)=>{
     try{
         const {email,password}=req.body;
-        const user= await userModel.findOne({email})
+        const normalizedEmail = normalizeEmail(email);
+        const user= await userModel.findOne({ email: normalizedEmail })
         if(!user)
             return res.json({success:false,message:"User does not exist"})
     
@@ -38,7 +60,7 @@ const userLogin=async(req,res)=>{
     
     }catch(error){
         console.log(error.message)
-        res.json({success:false,error})
+        res.status(500).json({success:false,message:"Login failed"})
         }
 }
 
@@ -46,45 +68,199 @@ const userRegister=async(req,res)=>{
     try{
         
         const{firstName,lastName,email,password,phone,userId}=req.body;
+        const normalizedEmail = normalizeEmail(email);
      
        
-        if(!validator.isEmail(email))
-            return res.json({success:false,message:"enter a valid email"})
-        const exist=await userModel.findOne({email});
-        if(exist)
-            return res.json({success:false,message:"user already exists"})
+        if(!validator.isEmail(normalizedEmail))
+            return res.status(400).json({success:false,message:"Enter a valid email"})
+        const existingUser = await userModel.findOne({
+          $or: [{ email: normalizedEmail }, { userId }, { phone }]
+        });
+        if(existingUser)
+            return res.status(400).json({success:false,message:"User already exists"})
+
+        const pendingConflict = await PendingSignup.findOne({
+          email: { $ne: normalizedEmail },
+          $or: [{ userId }, { phone }]
+        });
+
+        if (pendingConflict) {
+          return res.status(400).json({
+            success: false,
+            message: "A signup is already pending with this phone or user ID"
+          });
+        }
         const salt=await bcrypt.genSalt(10)
         const hashedPassword=await bcrypt.hash(password,salt);
-        
-        const token = crypto.randomBytes(32).toString("hex");
+        const otpPayload = buildOtpPayload();
 
-        const user = new userModel({
+        await PendingSignup.findOneAndUpdate(
+          { email: normalizedEmail },
+          {
             firstName,
             lastName,
             phone,
-            email,
+            email: normalizedEmail,
             password: hashedPassword,
             userId,
-            isVerified: false,
-            verificationToken: token
-        });  
-    
-       
-        await user.save();
-        const x=await sendVerificationEmail(email, token);
-        console.log("email sent",x)
+            ...otpPayload
+          },
+          {
+            upsert: true,
+            new: true,
+            setDefaultsOnInsert: true
+          }
+        );
 
-res.json({
-    success: true,
-    message: "Verification email sent"
-});
+        await sendVerificationOtpEmail(normalizedEmail, otpPayload.otp);
+
+        res.json({
+          success: true,
+          message: "Verification OTP sent to your email"
+        });
    
         
     }catch(error){
         console.log(error)
-        res.json({success:false,error})
+        res.status(500).json({success:false,message:"Failed to start signup"})
     }
 }
+
+const verifySignupOtp = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    const normalizedEmail = normalizeEmail(email);
+
+    const pendingSignup = await PendingSignup.findOne({
+      email: normalizedEmail
+    });
+
+    if (!pendingSignup) {
+      return res.status(404).json({
+        success: false,
+        message: "No pending signup found for this email"
+      });
+    }
+
+    if (
+      pendingSignup.verificationBlockedUntil &&
+      pendingSignup.verificationBlockedUntil > new Date()
+    ) {
+      return res.status(429).json({
+        success: false,
+        message: "Too many wrong OTP attempts. Please try again later"
+      });
+    }
+
+    if (pendingSignup.otp !== otp) {
+      pendingSignup.otpAttempts += 1;
+
+      if (pendingSignup.otpAttempts >= OTP_MAX_ATTEMPTS) {
+        pendingSignup.verificationBlockedUntil = new Date(Date.now() + OTP_BLOCK_MS);
+      }
+
+      await pendingSignup.save();
+
+      return res.status(400).json({
+        success: false,
+        message:
+          pendingSignup.otpAttempts >= OTP_MAX_ATTEMPTS
+            ? "Too many wrong OTP attempts. Please try again later"
+            : "Invalid OTP"
+      });
+    }
+
+    if (pendingSignup.otpExpiresAt < new Date()) {
+      await PendingSignup.deleteOne({ _id: pendingSignup._id });
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired. Please register again"
+      });
+    }
+
+    const duplicateUser = await userModel.findOne({
+      $or: [
+        { email: pendingSignup.email },
+        { userId: pendingSignup.userId },
+        { phone: pendingSignup.phone }
+      ]
+    });
+
+    if (duplicateUser) {
+      await PendingSignup.deleteOne({ _id: pendingSignup._id });
+      return res.status(400).json({
+        success: false,
+        message: "User already exists"
+      });
+    }
+
+    const user = await userModel.create({
+      firstName: pendingSignup.firstName,
+      lastName: pendingSignup.lastName,
+      phone: pendingSignup.phone,
+      email: pendingSignup.email,
+      password: pendingSignup.password,
+      userId: pendingSignup.userId,
+      isVerified: true
+    });
+
+    await PendingSignup.deleteOne({ _id: pendingSignup._id });
+
+    const token = await createToken(user._id);
+
+    return res.json({
+      success: true,
+      message: "Email verified successfully",
+      token
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to verify OTP"
+    });
+  }
+};
+
+const resendSignupOtp = async (req, res) => {
+  try {
+    const normalizedEmail = normalizeEmail(req.body.email);
+    const pendingSignup = await PendingSignup.findOne({ email: normalizedEmail });
+
+    if (!pendingSignup) {
+      return res.status(404).json({
+        success: false,
+        message: "No pending signup found for this email"
+      });
+    }
+
+    const now = Date.now();
+    const lastSent = new Date(pendingSignup.otpLastSentAt).getTime();
+
+    if (now - lastSent < OTP_RESEND_COOLDOWN_MS) {
+      const secondsLeft = Math.ceil((OTP_RESEND_COOLDOWN_MS - (now - lastSent)) / 1000);
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${secondsLeft}s before requesting another OTP`
+      });
+    }
+
+    Object.assign(pendingSignup, buildOtpPayload());
+    await pendingSignup.save();
+    await sendVerificationOtpEmail(normalizedEmail, pendingSignup.otp);
+
+    return res.json({
+      success: true,
+      message: "A new OTP has been sent"
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to resend OTP"
+    });
+  }
+};
 
 const getCurrentUser = async (req, res) => {
     try {
@@ -161,7 +337,7 @@ const getCurrentUser = async (req, res) => {
   
     } catch (error) {
       console.log(error);
-      res.json({ success: false, message: "Error sending reset email" });
+      res.status(500).json({ success: false, message: "Error sending reset email" });
     }
   };
 
@@ -182,37 +358,9 @@ const getCurrentUser = async (req, res) => {
   
     } catch (error) {
       console.log(error);
-      res.json({ success: false, message: "Invalid or expired token" });
+      res.status(400).json({ success: false, message: "Invalid or expired token" });
     }
   };
-
-
-  const verifyUser = async (req, res) => {
-    try {
-      const user = await userModel.findOne({
-        verificationToken: req.params.token
-      });
-  
-      if (!user) {
-        return res.send("Invalid or expired token");
-      }
-  
-      user.isVerified = true;
-      user.verificationToken = null;
-  
-      await user.save();
-  
-      res.send("Email verified successfully");
-    } catch (error) {
-      res.send("Error verifying email");
-    }
-  };
-
-
-  
-
- import { sendContactEmail } from "../services/emailService.js";
-
 export const sendContact = async (req, res) => {
   try {
     const { name, email, message } = req.body;
@@ -245,8 +393,9 @@ export const sendContact = async (req, res) => {
   export {
     userLogin,
     userRegister,
+    verifySignupOtp,
+    resendSignupOtp,
     getCurrentUser,
     forgotPassword,
-    resetPassword,
-    verifyUser
+    resetPassword
   };

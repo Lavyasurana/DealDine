@@ -1,7 +1,5 @@
-import { useState } from 'react'
-
 import './App.css'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import Home from './pages/Home'
 
 import Navbar from './components/Navbar'
@@ -20,8 +18,9 @@ import { Privacy } from './pages/Privacy'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import { RefundPolicy } from './pages/Refund'
-import Verify from './pages/verify'
 import { VerifyPayment } from './pages/VerifyPayment'
+import { ProtectedRoute } from './ProtectedRoute'
+import { CashfreeReturn } from './pages/CashfreeReturn'
 function App() {
 
 
@@ -52,14 +51,14 @@ function App() {
           <Route path="/contact" element={<Contact/>} />
           
           <Route path="/coupon/:couponId" element={<CouponPage />} />
-          <Route path="/profile" element={<Profile/>}/>
+          <Route path="/profile" element={<ProtectedRoute><Profile/></ProtectedRoute>}/>
           <Route path='/search' element={<Search/>}/>
           <Route path='/terms' element={<Terms/>}/>
           <Route path="/privacy" element={<Privacy/>}/>
           <Route path="/forgot-password" element={<ForgotPassword/>}/>
           <Route path='/reset-password/:token' element={<ResetPassword/>}/>
           <Route path="/refund" element={<RefundPolicy/>}/>
-          <Route path="/verify/:token" element={<Verify />} />
+          <Route path="/cashfree-return" element={<CashfreeReturn/>}/>
           <Route path="/verify-payment/:dealId" element={<VerifyPayment/>}/>
           </Routes>
         </div>
