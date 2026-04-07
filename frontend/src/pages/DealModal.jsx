@@ -17,7 +17,8 @@ export function DealModal() {
   const [open, setOpen] = useState(false);
   const [loadingCredits, setLoadingCredits] = useState(false);
   const [qrCode, setQrCode] = useState("");
-const [showQR, setShowQR] = useState(false);
+  const [showQR, setShowQR] = useState(false);
+  const [showUpiApps, setShowUpiApps] = useState(false);
 
   const deal = liveDeals.find((d) => d._id === dealId);
 
@@ -37,6 +38,25 @@ const [showQR, setShowQR] = useState(false);
   const currency = "INR";
   const receiptId = "receipt_" + Date.now();
 
+  const upiId = "lavyasurana14@okhdfcbank";
+  const payeeName = "DealDine";
+  const transactionNote = `Deal for ${deal.resName}`;
+
+  const buildUpiUrl = (scheme = "upi://pay") =>
+    `${scheme}?pa=${upiId}&pn=${encodeURIComponent(
+      payeeName
+    )}&tn=${encodeURIComponent(transactionNote)}&am=${deal.price}&cu=INR`;
+
+  const openUpiUrl = (scheme = "upi://pay") => {
+    const upiUrl = buildUpiUrl(scheme);
+    window.location.href = upiUrl;
+    toast.info("Opening UPI app...");
+
+    setTimeout(() => {
+      navigate(`/verify-payment/${dealId}`);
+    }, 5000);
+  };
+
   // ================UPI PAYMENT=================
   const upiPaymentHandler = async (e) => {
     e.preventDefault();
@@ -47,26 +67,17 @@ const [showQR, setShowQR] = useState(false);
       return navigate("/login");
     }
   
-    const upiId = "lavyasurana14@okhdfcbank";
-    const payeeName = "DealDine";
-    const transactionNote = `Deal for ${deal.resName}`;
-    const amount = deal.price;
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-  
-    const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(
-      payeeName
-    )}&tn=${encodeURIComponent(transactionNote)}&am=${amount}&cu=INR`;
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    const upiUrl = buildUpiUrl();
   
     if (isMobile) {
-      // ✅ Open UPI app
-      window.location.href = upiUrl;
-  
-      toast.info("Opening UPI App...");
-  
-      // Redirect to verification page (manual)
-      setTimeout(() => {
-        navigate(`/verify-payment/${dealId}`);
-      }, 5000);
+      if (isIOS) {
+        setShowUpiApps(true);
+        return;
+      }
+
+      openUpiUrl();
     } else {
       // ✅ Desktop → Generate QR
       try {
@@ -346,6 +357,55 @@ const [showQR, setShowQR] = useState(false);
     </div>
   </div>
 )}
+      {showUpiApps && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-2xl text-center w-80">
+            <h2 className="text-xl font-semibold mb-2">Choose UPI App</h2>
+
+            <p className="text-sm text-gray-600 mb-4">
+              On iPhone, opening a generic UPI link can jump to WhatsApp. Pick a
+              UPI app directly.
+            </p>
+
+            <div className="space-y-2">
+              <button
+                onClick={() => openUpiUrl("tez://upi/pay")}
+                className="w-full bg-black text-white py-2 rounded-lg"
+              >
+                Open Google Pay
+              </button>
+
+              <button
+                onClick={() => openUpiUrl("phonepe://pay")}
+                className="w-full bg-gray-900 text-white py-2 rounded-lg"
+              >
+                Open PhonePe
+              </button>
+
+              <button
+                onClick={() => openUpiUrl("paytmmp://pay")}
+                className="w-full bg-gray-800 text-white py-2 rounded-lg"
+              >
+                Open Paytm
+              </button>
+
+              <button
+                onClick={() => openUpiUrl("upi://pay")}
+                className="w-full border border-gray-300 py-2 rounded-lg"
+              >
+                Other UPI Apps
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowUpiApps(false)}
+              className="mt-4 text-sm text-gray-500"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
