@@ -41,11 +41,14 @@ export function DealModal() {
   const upiId = "lavyasurana14@okhdfcbank";
   const payeeName = "DealDine";
   const transactionNote = `Deal for ${deal.resName}`;
+  const transactionId = `dealdine_${dealId}_${Date.now()}`;
 
   const buildUpiUrl = (scheme = "upi://pay") =>
     `${scheme}?pa=${upiId}&pn=${encodeURIComponent(
       payeeName
-    )}&tn=${encodeURIComponent(transactionNote)}&am=${deal.price}&cu=INR`;
+    )}&tn=${encodeURIComponent(transactionNote)}&tr=${encodeURIComponent(
+      transactionId
+    )}&tid=${encodeURIComponent(transactionId)}&am=${deal.price}&cu=INR`;
 
   const openUpiUrl = (scheme = "upi://pay") => {
     const upiUrl = buildUpiUrl(scheme);
