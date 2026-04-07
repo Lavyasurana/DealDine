@@ -9,18 +9,16 @@ const transactionSchema = new mongoose.Schema({
   gatewayPaymentId: { type: String, sparse: true },
   provider: {
     type: String,
-    enum: ['manual_upi', 'cashfree'],
-    default: 'manual_upi'
+    enum: ['cashfree'],
+    default: 'cashfree'
   },
   userCouponId: { type: mongoose.Schema.Types.ObjectId, ref: 'UserCoupon' },
   amount: { type: Number, required: true },
-  screenshotUrl: { type: String }, // Cloudinary link
   status: { 
     type: String, 
     enum: ['created', 'pending', 'approved', 'rejected'], 
     default: 'pending' 
   },
-  verifiedByBank: { type: Boolean, default: false }, // Becomes true when SMS hits
   createdAt: { type: Date, default: Date.now }
 });
 

@@ -3,11 +3,15 @@ import axios from "axios";
 import { rescueContext } from "../context/rescueContext";
 import { IssuedCouponCard } from "../components/IssuedCouponCard";
 import { User, Ticket, Wallet } from "lucide-react";
+import { toast } from "react-toastify";
 
 export function Profile() {
   const [activeTab, setActiveTab] = useState("info");
   const [coupons, setCoupons] = useState([]);
   const [user, setUser] = useState(null);
+  const [isEditingPhone, setIsEditingPhone] = useState(false);
+  const [phone, setPhone] = useState("");
+  const [savingPhone, setSavingPhone] = useState(false);
 
   const { backendUrl,userCredits, clearAuthState, navigate } = useContext(rescueContext);
 
@@ -22,6 +26,7 @@ export function Profile() {
         });
 
         setUser(userRes.data.user);
+        setPhone(userRes.data.user.phone || "");
 
         const couponRes = await axios.get(`${backendUrl}/coupon/my`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -42,6 +47,47 @@ export function Profile() {
 
     fetchData();
   }, [backendUrl, clearAuthState, navigate]);
+
+  const savePhoneNumber = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (!token) {
+        clearAuthState();
+        navigate("/login");
+        return;
+      }
+
+      setSavingPhone(true);
+
+      const { data } = await axios.put(
+        `${backendUrl}/api/user/me`,
+        { phone },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (data.success) {
+        setUser(data.user);
+        setPhone(data.user.phone || "");
+        setIsEditingPhone(false);
+        toast.success("Mobile number updated");
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      if (error.response?.status === 401) {
+        clearAuthState();
+        navigate("/login");
+        return;
+      }
+
+      toast.error(error.response?.data?.message || "Failed to update mobile number");
+    } finally {
+      setSavingPhone(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-gray-100 to-gray-200">
@@ -108,14 +154,53 @@ export function Profile() {
 
             {/* 📄 DETAILS */}
             <div className="bg-white rounded-2xl shadow-lg p-6 space-y-3">
-              <h3 className="text-lg font-semibold mb-2">
-                Account Details
-              </h3>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-semibold">
+                  Account Details
+                </h3>
 
-              <p className="flex justify-between">
+                {!isEditingPhone ? (
+                  <button
+                    onClick={() => setIsEditingPhone(true)}
+                    className="text-sm text-emerald-600 font-medium"
+                  >
+                    Edit
+                  </button>
+                ) : (
+                  <div className="flex gap-3 text-sm">
+                    <button
+                      onClick={savePhoneNumber}
+                      disabled={savingPhone}
+                      className="text-emerald-600 font-medium disabled:text-gray-400"
+                    >
+                      {savingPhone ? "Saving..." : "Save"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setPhone(user.phone || "");
+                        setIsEditingPhone(false);
+                      }}
+                      className="text-gray-500"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-between items-center gap-4">
                 <span className="text-gray-500">Phone</span>
-                <span>{user.phone}</span>
-              </p>
+                {isEditingPhone ? (
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    className="border border-gray-300 rounded px-3 py-1.5 text-right"
+                  />
+                ) : (
+                  <span>{user.phone}</span>
+                )}
+              </div>
 
               <p className="flex justify-between">
                 <span className="text-gray-500">User ID</span>

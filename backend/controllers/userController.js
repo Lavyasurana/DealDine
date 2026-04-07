@@ -107,7 +107,7 @@ const userRegister=async(req,res)=>{
           },
           {
             upsert: true,
-            new: true,
+            returnDocument: "after",
             setDefaultsOnInsert: true
           }
         );
@@ -289,6 +289,56 @@ const getCurrentUser = async (req, res) => {
     }
   };
 
+const updateCurrentUser = async (req, res) => {
+  try {
+    const normalizedPhone = String(req.body.phone || "").trim();
+
+    if (!normalizedPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number is required",
+      });
+    }
+
+    const existingUser = await userModel.findOne({
+      phone: normalizedPhone,
+      _id: { $ne: req.user.id },
+    });
+
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "Phone number is already in use",
+      });
+    }
+
+    const user = await userModel.findByIdAndUpdate(
+      req.user.id,
+      { phone: normalizedPhone },
+      { new: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Profile updated successfully",
+      user,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to update profile",
+    });
+  }
+};
+
   const forgotPassword = async (req, res) => {
     try {
       const { email } = req.body;
@@ -396,6 +446,7 @@ export const sendContact = async (req, res) => {
     verifySignupOtp,
     resendSignupOtp,
     getCurrentUser,
+    updateCurrentUser,
     forgotPassword,
     resetPassword
   };

@@ -18,7 +18,6 @@ import { Privacy } from './pages/Privacy'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import { RefundPolicy } from './pages/Refund'
-import { VerifyPayment } from './pages/VerifyPayment'
 import { ProtectedRoute } from './ProtectedRoute'
 import { CashfreeReturn } from './pages/CashfreeReturn'
 function App() {
@@ -59,7 +58,6 @@ function App() {
           <Route path='/reset-password/:token' element={<ResetPassword/>}/>
           <Route path="/refund" element={<RefundPolicy/>}/>
           <Route path="/cashfree-return" element={<CashfreeReturn/>}/>
-          <Route path="/verify-payment/:dealId" element={<VerifyPayment/>}/>
           </Routes>
         </div>
         <Footer/>
