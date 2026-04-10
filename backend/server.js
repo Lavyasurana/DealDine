@@ -13,6 +13,9 @@ import paymentRouter from './routers/paymentRouter.js';
 const app = express();
 const PORT = process.env.PORT || 5111;
 
+// Trust the first reverse proxy so req.ip reflects the real client IP in production.
+app.set("trust proxy", 1);
+
 connectDB();
 connectCloudinary();
 
