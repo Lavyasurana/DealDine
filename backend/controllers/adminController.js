@@ -126,9 +126,12 @@ export const adminProfile = async (req, res) => {
 
     let imageUrl = "";
 
-    // upload image only if provided
+    // multer uses memoryStorage, so uploaded files are available as buffers.
     if (req.file) {
-      const result = await cloudinary.uploader.upload(req.file.path);
+      const fileUri = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+      const result = await cloudinary.uploader.upload(fileUri, {
+        resource_type: "image",
+      });
       imageUrl = result.secure_url;
     }
 
@@ -173,5 +176,4 @@ export const getAllAdmin=async(req,res)=>{
 
 
 }
-
 
