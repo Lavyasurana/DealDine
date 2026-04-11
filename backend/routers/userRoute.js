@@ -1,5 +1,5 @@
 import express from 'express'
-import { userLogin, userRegister ,verifySignupOtp,resendSignupOtp,getCurrentUser,updateCurrentUser,forgotPassword,resetPassword, sendContact} from '../controllers/userController.js';
+import { userLogin, userRegister ,verifySignupOtp,resendSignupOtp,getCurrentUser,updateCurrentUser,forgotPassword,resetPassword, sendContact, handleResendWebhook} from '../controllers/userController.js';
 import { authMiddleware } from '../middleware/authmiddleware.js';
 import NotiTokenModel from '../models/NotiToken.js';
 const userRouter=express.Router();
@@ -13,6 +13,7 @@ userRouter.put('/me', authMiddleware, updateCurrentUser);
 userRouter.post('/forgot-password', forgotPassword);
 userRouter.post('/reset-password', resetPassword);
 userRouter.post("/contact", sendContact);
+userRouter.post("/email/webhook", handleResendWebhook);
 
 
 

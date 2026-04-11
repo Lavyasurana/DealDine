@@ -5,18 +5,21 @@ const DATE_TIME_OPTIONS = {
   hour: "numeric",
   minute: "2-digit",
   hour12: true,
+  timeZone: "Asia/Kolkata",
 };
 
 const DATE_OPTIONS = {
   day: "numeric",
   month: "short",
   year: "numeric",
+  timeZone: "Asia/Kolkata",
 };
 
 const TIME_OPTIONS = {
   hour: "numeric",
   minute: "2-digit",
   hour12: true,
+  timeZone: "Asia/Kolkata",
 };
 
 export const parseBackendDateTime = (value) => {
@@ -28,15 +31,7 @@ export const parseBackendDateTime = (value) => {
     return null;
   }
 
-  return new Date(
-    parsed.getUTCFullYear(),
-    parsed.getUTCMonth(),
-    parsed.getUTCDate(),
-    parsed.getUTCHours(),
-    parsed.getUTCMinutes(),
-    parsed.getUTCSeconds(),
-    parsed.getUTCMilliseconds()
-  );
+  return parsed;
 };
 
 export const formatDateTime = (value) => {

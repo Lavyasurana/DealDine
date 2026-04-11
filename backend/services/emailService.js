@@ -2,6 +2,8 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+const sendEmail = async (payload) => resend.emails.send(payload);
+
 // 🔥 Deal Email
 export const sendDealEmail = async (email, deal) => {
   try {
@@ -63,7 +65,7 @@ export const sendDealEmail = async (email, deal) => {
 
   `;
 
-  const response = await resend.emails.send({
+  const response = await sendEmail({
     from: "DealDine <noreply@dealdine.in>",
     reply_to: "dealdine24@gmail.com",
     to: email,
@@ -77,49 +79,35 @@ export const sendDealEmail = async (email, deal) => {
 };
 
 export const sendVerificationOtpEmail = async (email, otp) => {
-  try {
-    const response = await resend.emails.send({
-      from: "DealDine <noreply@dealdine.in>",
-      reply_to: "dealdine24@gmail.com",
-      to: email,
-      subject: "Your DealDine verification code",
-      html: `
-        <h2>Your verification code is ${otp}</h2>
-        <p>This OTP will expire in 10 minutes.</p>
-        <p>If you did not request this, you can ignore this email.</p>
-      `,
-    });
-
-    console.log("✅ Verification OTP email sent:", response);
-  } catch (error) {
-    console.log("❌ OTP email failed:", error);
-    throw error;
-  }
+  await sendEmail({
+    from: "DealDine <noreply@dealdine.in>",
+    reply_to: "dealdine24@gmail.com",
+    to: email,
+    subject: "Your DealDine verification code",
+    html: `
+      <h2>Your verification code is ${otp}</h2>
+      <p>This OTP will expire in 10 minutes.</p>
+      <p>If you did not request this, you can ignore this email.</p>
+    `,
+  });
 };
 
 export const sendContactEmail = async ({ name, email, message }) => {
-  try {
-    const html = `
-      <h2>📩 New Contact Message</h2>
-      <p><b>Name:</b> ${name}</p>
-      <p><b>Email:</b> ${email}</p>
-      <p><b>Message:</b></p>
-      <p>${message}</p>
-    `;
+  const html = `
+    <h2>📩 New Contact Message</h2>
+    <p><b>Name:</b> ${name}</p>
+    <p><b>Email:</b> ${email}</p>
+    <p><b>Message:</b></p>
+    <p>${message}</p>
+  `;
 
-    const response = await resend.emails.send({
-      from: "DealDine <noreply@dealdine.in>",
-      reply_to: email, // 👈 important (so you can reply directly)
-      to: "dealdine24@gmail.com", // 👈 YOU receive message
-      subject: `New Contact from ${name}`,
-      html,
-    });
-
-    console.log("✅ Contact email sent:", response);
-  } catch (error) {
-    console.log("❌ Contact email failed:", error);
-    throw error;
-  }
+  await sendEmail({
+    from: "DealDine <noreply@dealdine.in>",
+    reply_to: email,
+    to: "dealdine24@gmail.com",
+    subject: `New Contact from ${name}`,
+    html,
+  });
 };
 
 export const sendCouponPurchaseEmail = async (email, coupon) => {
@@ -143,14 +131,12 @@ export const sendCouponPurchaseEmail = async (email, coupon) => {
       <p>You can also view this coupon in your DealDine account anytime.</p>
     `;
 
-    await resend.emails.send({
+    await sendEmail({
       from: "DealDine <noreply@dealdine.in>",
       reply_to: "dealdine24@gmail.com",
       to: email,
       subject: "Your DealDine coupon details",
       html,
     });
-  } catch (error) {
-    console.log("❌ Coupon purchase email failed:", error);
-  }
+  } catch (error) {}
 };

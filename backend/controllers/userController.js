@@ -431,12 +431,18 @@ export const sendContact = async (req, res) => {
     });
 
   } catch (error) {
-    console.log("❌ Contact Controller Error:", error);
-
     return res.status(500).json({
       success: false,
       message: "Failed to send message",
     });
+  }
+};
+
+export const handleResendWebhook = async (req, res) => {
+  try {
+    return res.status(200).json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ success: false });
   }
 };
 

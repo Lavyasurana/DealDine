@@ -5,14 +5,14 @@ const DATE_TIME_OPTIONS = {
   hour: "numeric",
   minute: "2-digit",
   hour12: true,
-  timeZone: "UTC",
+  timeZone: "Asia/Kolkata",
 };
 
 const DATE_OPTIONS = {
   day: "numeric",
   month: "short",
   year: "numeric",
-  timeZone: "UTC",
+  timeZone: "Asia/Kolkata",
 };
 
 export const formatDate = (value) => {
