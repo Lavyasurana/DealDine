@@ -5,7 +5,7 @@ import { rescueContext } from "../context/rescueContext";
 
 export function CashfreeReturn() {
   const [searchParams] = useSearchParams();
-  const { backendUrl, navigate } = useContext(rescueContext);
+  const { backendUrl, navigate, getUser } = useContext(rescueContext);
   const [status, setStatus] = useState("verifying");
   const [message, setMessage] = useState("Verifying your payment...");
 
@@ -29,6 +29,7 @@ export function CashfreeReturn() {
         );
 
         if (data.success) {
+          await getUser();
           navigate(`/coupon/${data.coupon._id}`, { replace: true });
           return;
         }
@@ -42,7 +43,7 @@ export function CashfreeReturn() {
     };
 
     confirmPayment();
-  }, [backendUrl, navigate, searchParams]);
+  }, [backendUrl, getUser, navigate, searchParams]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">

@@ -20,6 +20,7 @@ import ResetPassword from './pages/ResetPassword'
 import { RefundPolicy } from './pages/Refund'
 import { ProtectedRoute } from './ProtectedRoute'
 import { CashfreeReturn } from './pages/CashfreeReturn'
+import { Checkout } from './pages/Checkout'
 function App() {
 
 
@@ -45,6 +46,7 @@ function App() {
           <Route path="/" element={<Home/>} />
           
           <Route path="/getDeals/:dealId" element={<DealModal/>} />
+          <Route path="/checkout/:dealId" element={<ProtectedRoute><Checkout/></ProtectedRoute>} />
           <Route path="/login" element={<Login/>} />
           <Route path="/upcoming" element={<Upcoming/>} />
           <Route path="/contact" element={<Contact/>} />

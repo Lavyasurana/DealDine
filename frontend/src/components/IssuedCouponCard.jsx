@@ -1,5 +1,6 @@
 import { useContext } from "react";
 import { rescueContext } from "../context/rescueContext";
+import { formatDateTime, parseBackendDateTime } from "../utils/dateTime";
 
 export function IssuedCouponCard({ coupon }) {
   const { navigate } = useContext(rescueContext);
@@ -11,7 +12,7 @@ export function IssuedCouponCard({ coupon }) {
   // ✅ STATUS LOGIC
   const now = new Date();
   const validTill = coupon.deal.validTill
-    ? new Date(coupon.deal.validTill)
+    ? parseBackendDateTime(coupon.deal.validTill)
     : null;
 
   let status = "Active";
@@ -39,14 +40,14 @@ export function IssuedCouponCard({ coupon }) {
       </p>
 
       <p className="text-gray-500 text-sm">
-        Issued: {new Date(coupon.issuedAt).toLocaleDateString()}
+        Issued: {formatDateTime(coupon.issuedAt)}
       </p>
 
       {/* ✅ VALIDITY */}
       {coupon.deal.validTill && (
         <p className="text-gray-500 text-sm mt-1">
           Valid till:{" "}
-          {new Date(coupon.deal.validTill).toLocaleString()}
+          {formatDateTime(coupon.deal.validTill)}
         </p>
       )}
 

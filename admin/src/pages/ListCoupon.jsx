@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from "react"
 import axios from "axios"
 import { adminContext } from "../context/adminContext"
+import { formatDateTime } from "../utils/dateTime"
 
 const ListCoupons = () => {
 
@@ -63,7 +64,7 @@ const ListCoupons = () => {
               </p>
 
               <p>
-                {new Date(deal.validTill).toLocaleString()}
+                {formatDateTime(deal.validTill)}
               </p>
             </div>
 

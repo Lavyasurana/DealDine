@@ -2,6 +2,7 @@ import express from "express";
 import {
   confirmCashfreePayment,
   createCashfreeOrder,
+  getCheckoutSummary,
   handleCashfreeWebhook,
   payWithCredits,
 } from "../controllers/TransactionController.js";
@@ -10,6 +11,7 @@ import { authMiddleware } from "../middleware/authmiddleware.js";
 
 const paymentRouter = express.Router();
 
+paymentRouter.get("/checkout-summary/:dealId", authMiddleware, getCheckoutSummary);
 paymentRouter.post("/pay-with-credits", authMiddleware, payWithCredits);
 paymentRouter.post("/cashfree/order", authMiddleware, createCashfreeOrder);
 paymentRouter.get("/cashfree/confirm/:orderId", authMiddleware, confirmCashfreePayment);

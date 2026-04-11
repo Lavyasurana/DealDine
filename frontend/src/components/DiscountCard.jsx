@@ -2,6 +2,7 @@ import React, { useContext } from "react";
 import { Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { rescueContext } from "../context/rescueContext";
+import { formatDateTime } from "../utils/dateTime";
 
 
 
@@ -33,22 +34,14 @@ export default function DiscountCard({
             </p>
 
 
-            <div className="flex items-center justify-between text-sm text-emerald-600 mt-3 ">
-              <p>
-                Valid On - {new Date(validFrom).toLocaleDateString("en-IN")} From
-              </p>
-
-              <div className="flex items-center gap-2 ">
+            <div className="text-sm text-emerald-600 mt-3 space-y-1">
+              <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4" />
-                <p>
-                  {new Date(validFrom).toLocaleTimeString("en-IN", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })} - {new Date(validTill).toLocaleTimeString("en-IN", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
+                <p>Valid From: {formatDateTime(validFrom)}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4" />
+                <p>Valid Till   : {formatDateTime(validTill)}</p>
               </div>
             </div>
             {/* 🔥 Price Added Here */}

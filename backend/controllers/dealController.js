@@ -8,12 +8,45 @@ import adminModel from "../models/adminModel.js";
 import NotiTokenModel from "../models/NotiToken.js";
 import admin from "../config/firebase.js";
 
+const parseDatetimeLocalAsIST = (value) => {
+  if (!value || typeof value !== "string") {
+    return value;
+  }
+
+  if (value.includes("Z") || /[+-]\d{2}:\d{2}$/.test(value)) {
+    return new Date(value);
+  }
+
+  const [datePart, timePart = "00:00"] = value.split("T");
+
+  if (!datePart) {
+    return value;
+  }
+
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour = 0, minute = 0] = timePart.split(":").map(Number);
+
+  if ([year, month, day, hour, minute].some(Number.isNaN)) {
+    return value;
+  }
+
+  const utcMillis = Date.UTC(year, month - 1, day, hour - 5, minute - 30);
+  return new Date(utcMillis);
+};
+
+const normalizeDealDates = (dealData) => ({
+  ...dealData,
+  validFrom: dealData.validFrom ? parseDatetimeLocalAsIST(dealData.validFrom) : dealData.validFrom,
+  validTill: dealData.validTill ? parseDatetimeLocalAsIST(dealData.validTill) : dealData.validTill,
+  expiryDate: dealData.expiryDate ? parseDatetimeLocalAsIST(dealData.expiryDate) : dealData.expiryDate,
+});
 
 
 const addDeal = async (req, res) => {
   try {
     const adminId = req.user.id;
     const { maxRedemptions, ...dealData } = req.body;
+    const normalizedDealData = normalizeDealDates(dealData);
 
     // ✅ 1. Fetch admin details
     const Admin = await adminModel.findById(adminId);
@@ -42,7 +75,7 @@ const addDeal = async (req, res) => {
 
     // ✅ 2. Create deal with admin data
     const deal = new dealModel({
-      ...dealData,
+      ...normalizedDealData,
       admin: adminId,
       ...(parsedMaxRedemptions !== undefined
         ? { maxRedemptions: parsedMaxRedemptions }
@@ -95,21 +128,14 @@ await Promise.all(
   })
 );
 
-// 🔥 FINAL LOG
-console.log("🔔 Notifications Summary:");
-console.log("✅ Success:", successCount);
-console.log("❌ Failed:", failureCount);
-console.log("👥 Total Tokens:", tokens.length);
-
-
     // ✅ 3. Fetch users
     const users = await userModel.find();
 
-    // ⚠️ 4. Send emails (we’ll optimize below)
-   // send emails in background (DON'T BLOCK API)
-Promise.all(
-  users.map(user => sendDealEmail(user.email, deal))
-).catch(err => console.log("Email error:", err));
+    // ⚠️ 4. Send emails in background
+    Promise.all(users.map((user) => sendDealEmail(user.email, deal)))
+      .then(() => {})
+      .catch((err) => console.log("Email summary error:", err));
+
     res.json({
       success: true,
       message: "Deal Added & Users Notified"

@@ -5,6 +5,7 @@ import { rescueContext } from "../context/rescueContext";
 import DiscountCard from "../components/DiscountCard";
 import { toast } from "react-toastify";
 import axios from "axios";
+import { formatDateTime } from "../utils/dateTime";
 
 
 export function DealModal() {
@@ -15,8 +16,6 @@ export function DealModal() {
 
   const [open, setOpen] = useState(false);
   const [loadingCredits, setLoadingCredits] = useState(false);
-  const [loadingOnlinePayment, setLoadingOnlinePayment] = useState(false);
-
   const deal = liveDeals.find((d) => d._id === dealId);
 
   useEffect(() => {
@@ -31,53 +30,16 @@ export function DealModal() {
     (d) => d.resName === deal.resName && d._id !== deal._id
   );
 
-  const cashfreePaymentHandler = async (e) => {
-    e.preventDefault();
+  const checkoutHandler = () => {
+    const token = localStorage.getItem("token");
 
-    if (!window.Cashfree) {
-      toast.error("Cashfree checkout is not available right now");
+    if (!token) {
+      toast.error("Please login first");
+      navigate("/login");
       return;
     }
 
-    const token = localStorage.getItem("token");
-    if (!token) {
-      toast.error("Please login first");
-      return navigate("/login");
-    }
-
-    try {
-      setLoadingOnlinePayment(true);
-      const { data } = await axios.post(
-        `${backendUrl}/api/payment/cashfree/order`,
-        { dealId },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (!data.success) {
-        toast.error(data.message || "Failed to start payment");
-        return;
-      }
-
-      const cashfree = window.Cashfree({
-        mode: import.meta.env.VITE_CASHFREE_ENV || "production",
-      });
-
-      const result = await cashfree.checkout({
-        paymentSessionId: data.paymentSessionId,
-        redirectTarget: "_self",
-      });
-
-      if (result.error) {
-        toast.error(result.error.message || "Payment failed");
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error(error.response?.data?.message || "Failed to start payment");
-    } finally {
-      setLoadingOnlinePayment(false);
-    }
+    navigate(`/checkout/${dealId}`);
   };
 
   // ================= CREDITS =================
@@ -139,24 +101,14 @@ export function DealModal() {
               {deal.dealName}
             </p>
 
-            <p>
-              Valid On -{" "}
-              {new Date(deal.validFrom).toLocaleDateString("en-IN")}
-            </p>
+            <div className="flex items-center gap-2 text-gray-600">
+              <Clock className="w-4 h-4" />
+              <p>Valid From: {formatDateTime(deal.validFrom)}</p>
+            </div>
 
             <div className="flex items-center gap-2 text-gray-600">
               <Clock className="w-4 h-4" />
-              <p>
-                {new Date(deal.validFrom).toLocaleTimeString("en-IN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}{" "}
-                -{" "}
-                {new Date(deal.validTill).toLocaleTimeString("en-IN", {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </p>
+              <p>Valid Till: {formatDateTime(deal.validTill)}</p>
             </div>
 
             <p className="text-sm text-gray-500">{deal.location}</p>
@@ -167,11 +119,10 @@ export function DealModal() {
 
               {/* Cashfree */}
               <button
-                onClick={cashfreePaymentHandler}
-                disabled={loadingOnlinePayment}
+                onClick={checkoutHandler}
                 className="w-full bg-black text-white py-3 rounded-xl hover:bg-gray-800 transition disabled:bg-gray-500"
               >
-                {loadingOnlinePayment ? "Opening Checkout..." : "Pay Online"}
+                Pay
               </button>
 
               {/* Credits */}

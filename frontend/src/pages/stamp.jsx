@@ -2,6 +2,7 @@ import { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { rescueContext } from "../context/rescueContext";
+import { formatDateTime, parseBackendDateTime } from "../utils/dateTime";
 
 export function CouponPage() {
   const { couponId } = useParams();
@@ -47,7 +48,14 @@ export function CouponPage() {
 
     const interval = setInterval(() => {
       const now = new Date();
-      const exp = new Date(expiry);
+      const exp = parseBackendDateTime(expiry);
+
+      if (!exp) {
+        setTimeLeft("");
+        clearInterval(interval);
+        return;
+      }
+
       const diff = exp - now;
 
       if (diff <= 0) {
@@ -87,7 +95,7 @@ export function CouponPage() {
   // ✅ STATUS LOGIC
   const now = new Date();
   const validTill = coupon.deal.validTill
-    ? new Date(coupon.deal.validTill)
+    ? parseBackendDateTime(coupon.deal.validTill)
     : null;
 
   const expiry =
@@ -127,7 +135,7 @@ export function CouponPage() {
           </p>
 
           <p className="text-gray-600">
-            Issued On: {new Date(coupon.issuedAt).toLocaleString()}
+            Issued On: {formatDateTime(coupon.issuedAt)}
           </p>
 
           {/* ✅ VALIDITY */}
@@ -136,13 +144,13 @@ export function CouponPage() {
 
             {coupon.deal.validFrom && coupon.deal.validTill ? (
               <p className="text-md font-semibold text-gray-700">
-                {new Date(coupon.deal.validFrom).toLocaleString()} 
+                {formatDateTime(coupon.deal.validFrom)}
                 {" → "} 
-                {new Date(coupon.deal.validTill).toLocaleString()}
+                {formatDateTime(coupon.deal.validTill)}
               </p>
             ) : expiry ? (
               <p className="text-md font-semibold text-gray-700">
-                Expires on {new Date(expiry).toLocaleString()}
+                Expires on {formatDateTime(expiry)}
               </p>
             ) : (
               <p className="text-md text-gray-500">No expiry info</p>

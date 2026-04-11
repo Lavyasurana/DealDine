@@ -2,6 +2,7 @@ import { useContext, useEffect } from "react";
 import { rescueContext } from "../context/rescueContext";
 import { Ticket } from "lucide-react";
 import { UpcomingDealTemplate } from "../components/UpcomingDealTemplate";
+import { parseBackendDateTime } from "../utils/dateTime";
 
 export function Upcoming() {
   const { liveDeals } = useContext(rescueContext);
@@ -11,7 +12,12 @@ export function Upcoming() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const dealDate = new Date(deal.validFrom);
+      const dealDate = parseBackendDateTime(deal.validFrom);
+
+      if (!dealDate) {
+        return false;
+      }
+
       dealDate.setHours(0, 0, 0, 0);
 
       return dealDate > today;

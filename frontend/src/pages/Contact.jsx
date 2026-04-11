@@ -2,6 +2,7 @@ import { Mail, MapPin, Phone, Send, CheckCircle } from "lucide-react"
 import { motion } from "framer-motion"
 import emailjs from "@emailjs/browser"
 import { useRef, useState } from "react"
+import { formatDateTime } from "../utils/dateTime"
 
 export function Contact() {
 
@@ -162,7 +163,7 @@ export function Contact() {
           <input
             type="hidden"
             name="time"
-            value={new Date().toLocaleString()}
+            value={formatDateTime(new Date())}
           />
 
           <button

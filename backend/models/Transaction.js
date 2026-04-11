@@ -14,6 +14,9 @@ const transactionSchema = new mongoose.Schema({
   },
   userCouponId: { type: mongoose.Schema.Types.ObjectId, ref: 'UserCoupon' },
   amount: { type: Number, required: true },
+  originalAmount: { type: Number, required: true },
+  creditsApplied: { type: Number, default: 0 },
+  creditsSettled: { type: Boolean, default: false },
   status: { 
     type: String, 
     enum: ['created', 'pending', 'approved', 'rejected'], 

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { formatDateTime, parseBackendDateTime } from "../utils/dateTime";
 
 export function UpcomingDealTemplate({ deal }) {
   const [timeLeft, setTimeLeft] = useState("");
@@ -7,7 +8,12 @@ export function UpcomingDealTemplate({ deal }) {
   useEffect(() => {
     const calculateTimeLeft = () => {
         const now = new Date();
-        const start = new Date(deal.validFrom);
+        const start = parseBackendDateTime(deal.validFrom);
+
+        if (!start) {
+          setTimeLeft("");
+          return;
+        }
       
         const diff = start - now;
       
@@ -54,7 +60,7 @@ export function UpcomingDealTemplate({ deal }) {
 
             <p className="text-xs text-gray-500 mt-2">
               Starts on:{" "}
-              {new Date(deal.validFrom).toLocaleDateString("en-IN")}
+              {formatDateTime(deal.validFrom)}
             </p>
 
             {/* 🔥 Countdown */}

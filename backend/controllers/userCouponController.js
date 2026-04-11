@@ -1,5 +1,6 @@
 import UserCoupon from "../models/userCouponModel.js";
 import dealModel from "../models/dealModel.js";
+import { sendCouponPurchaseEmail } from "../services/emailService.js";
 
 const hasReachedClaimLimit = async (dealId, maxRedemptions) => {
   const totalClaims = await UserCoupon.countDocuments({ deal: dealId });
@@ -48,6 +49,7 @@ export const createCoupon = async (req, res) => {
 
     await coupon.populate("deal");
     await coupon.populate("user");
+    await sendCouponPurchaseEmail(coupon.user.email, coupon);
 
     return res.json({
       success: true,

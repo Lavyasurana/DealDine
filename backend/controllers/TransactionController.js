@@ -4,6 +4,7 @@ import Transaction from "../models/Transaction.js";
 import userModel from "../models/userModel.js";
 import dealModel from "../models/dealModel.js";
 import UserCoupon from "../models/userCouponModel.js";
+import { sendCouponPurchaseEmail } from "../services/emailService.js";
 const CASHFREE_API_VERSION = process.env.CASHFREE_API_VERSION || "2023-08-01";
 const CASHFREE_ENV = (process.env.CASHFREE_ENV || "production").toLowerCase();
 const CASHFREE_API_BASE =
@@ -54,6 +55,43 @@ const validateDealPurchase = async (userId, dealId) => {
   return { user, deal };
 };
 
+const buildCheckoutSummary = (user, deal) => {
+  const dealPrice = Number(deal.price) || 0;
+  const availableCredits = Math.max(Number(user.credits) || 0, 0);
+  const creditsApplied = Math.min(availableCredits, dealPrice);
+  const cashAmount = Math.max(dealPrice - creditsApplied, 0);
+
+  return {
+    dealPrice,
+    availableCredits,
+    creditsApplied,
+    creditsLeft: availableCredits - creditsApplied,
+    cashAmount,
+  };
+};
+
+const settleTransactionCredits = async (transaction) => {
+  if (!transaction || transaction.creditsSettled || !transaction.creditsApplied) {
+    return;
+  }
+
+  const user = await userModel.findById(transaction.userId);
+
+  if (!user) {
+    throw new Error("User not found while applying credits");
+  }
+
+  if (user.credits < transaction.creditsApplied) {
+    throw new Error("User does not have enough credits to settle this transaction");
+  }
+
+  user.credits -= transaction.creditsApplied;
+  await user.save();
+
+  transaction.creditsSettled = true;
+  await transaction.save();
+};
+
 const issueCouponForTransaction = async (transaction) => {
   if (transaction.userCouponId) {
     const coupon = await UserCoupon.findById(transaction.userCouponId).populate("deal");
@@ -81,6 +119,11 @@ const issueCouponForTransaction = async (transaction) => {
   });
 
   await coupon.populate("deal");
+  await coupon.populate("user");
+
+  if (coupon.user?.email) {
+    await sendCouponPurchaseEmail(coupon.user.email, coupon);
+  }
 
   transaction.userCouponId = coupon._id;
   transaction.status = "approved";
@@ -151,8 +194,39 @@ const syncCashfreeOrder = async (transaction, cashfreeOrder, gatewayPaymentId) =
     };
   }
 
+  await settleTransactionCredits(transaction);
   const coupon = await issueCouponForTransaction(transaction);
   return { success: true, coupon };
+};
+
+export const getCheckoutSummary = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { dealId } = req.params;
+    const validation = await validateDealPurchase(userId, dealId);
+
+    if (validation.error) {
+      return res.status(400).json({
+        success: false,
+        message: validation.error,
+      });
+    }
+
+    const { user, deal } = validation;
+    const summary = buildCheckoutSummary(user, deal);
+
+    return res.json({
+      success: true,
+      deal,
+      summary,
+    });
+  } catch (error) {
+    console.log("Checkout summary error:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to load checkout summary",
+    });
+  }
 };
 
 export const createCashfreeOrder = async (req, res) => {
@@ -171,13 +245,22 @@ export const createCashfreeOrder = async (req, res) => {
     }
 
     const { user, deal } = validation;
+    const summary = buildCheckoutSummary(user, deal);
+
+    if (summary.cashAmount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "This deal can be purchased fully using credits",
+      });
+    }
+
     const orderId = `deal_${dealId}_${Date.now()}`;
     const returnUrl = `${getClientUrl()}/cashfree-return?order_id={order_id}&deal_id=${dealId}`;
     const notifyUrl = `${getBackendPublicUrl(req)}/api/payment/cashfree/webhook`;
 
     const orderPayload = {
       order_id: orderId,
-      order_amount: Number(deal.price),
+      order_amount: summary.cashAmount,
       order_currency: "INR",
       customer_details: {
         customer_id: String(user._id),
@@ -203,7 +286,10 @@ export const createCashfreeOrder = async (req, res) => {
         dealId,
         transactionId: orderId,
         gatewayOrderId: orderId,
-        amount: deal.price,
+        amount: summary.cashAmount,
+        originalAmount: summary.dealPrice,
+        creditsApplied: summary.creditsApplied,
+        creditsSettled: false,
         provider: "cashfree",
         status: "created",
       },
@@ -308,14 +394,16 @@ export const payWithCredits = async (req, res) => {
 
     const { user, deal } = validation;
 
-    if (user.credits < deal.price) {
+    const summary = buildCheckoutSummary(user, deal);
+
+    if (summary.cashAmount > 0) {
       return res.status(400).json({
         success: false,
         message: "Not enough credits",
       });
     }
 
-    user.credits -= deal.price;
+    user.credits -= summary.dealPrice;
     await user.save();
 
     const coupon = await UserCoupon.create({
@@ -324,6 +412,8 @@ export const payWithCredits = async (req, res) => {
     });
 
     await coupon.populate("deal");
+    await coupon.populate("user");
+    await sendCouponPurchaseEmail(coupon.user.email, coupon);
 
     return res.json({
       success: true,
