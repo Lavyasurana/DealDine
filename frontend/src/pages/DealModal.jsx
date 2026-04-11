@@ -124,11 +124,13 @@ export function DealModal() {
       <div className="max-w-6xl mx-auto flex flex-col lg:flex-row gap-8">
         {/* LEFT SIDE */}
         <div className="lg:w-2/3 bg-white rounded-2xl shadow-lg overflow-hidden">
-          <img
-            src={deal.image}
-            alt={deal.resName}
-            className="w-full h-64 object-cover"
-          />
+          <div className="w-full h-64 bg-gray-100 flex items-center justify-center">
+            <img
+              src={deal.image}
+              alt={deal.resName}
+              className="w-full h-full object-contain"
+            />
+          </div>
 
           <div className="p-6 space-y-4">
             <h1 className="text-3xl font-bold">{deal.resName}</h1>

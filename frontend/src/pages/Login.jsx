@@ -4,6 +4,8 @@ import axios from 'axios'
 import { toast } from 'react-toastify';
 import { Link } from "react-router-dom";
 
+const SIGNUP_OTP_STORAGE_KEY = "pendingSignupOtp";
+
 export function Login() {
     const [firstName, setFirstName] = useState('')
     const [lastName, setLastName] = useState('')
@@ -20,11 +22,26 @@ export function Login() {
 
     const { backendUrl, navigate, setUserLogin,getUser } = useContext(rescueContext);
 
+    const persistPendingSignup = (signupEmail) => {
+        sessionStorage.setItem(
+            SIGNUP_OTP_STORAGE_KEY,
+            JSON.stringify({
+                email: signupEmail,
+                expiresAt: Date.now() + 10 * 60 * 1000,
+            })
+        );
+    };
+
+    const clearPendingSignup = () => {
+        sessionStorage.removeItem(SIGNUP_OTP_STORAGE_KEY);
+    };
+
     const switchToLogin = () => {
         setCurrentState('Login');
         setShowOtpStep(false);
         setOtp('');
         setResendCooldown(0);
+        clearPendingSignup();
     };
 
     const resetSignupForm = () => {
@@ -39,6 +56,7 @@ export function Login() {
         setOtp('');
         setShowOtpStep(false);
         setResendCooldown(0);
+        clearPendingSignup();
     };
 
     const completeLogin = async (token) => {
@@ -116,6 +134,7 @@ export function Login() {
                     setOtp('');
                     setShowOtpStep(true);
                     startResendCooldown();
+                    persistPendingSignup(email);
                 }
                 else{
                     toast.error(response.data.message)
@@ -164,6 +183,40 @@ export function Login() {
 
         return () => clearInterval(timer);
     }, [resendCooldown]);
+
+    useEffect(() => {
+        const rawPendingSignup = sessionStorage.getItem(SIGNUP_OTP_STORAGE_KEY);
+
+        if (!rawPendingSignup) {
+            return;
+        }
+
+        try {
+            const pendingSignup = JSON.parse(rawPendingSignup);
+
+            if (!pendingSignup.email || !pendingSignup.expiresAt) {
+                clearPendingSignup();
+                return;
+            }
+
+            if (pendingSignup.expiresAt <= Date.now()) {
+                clearPendingSignup();
+                return;
+            }
+
+            setEmail(pendingSignup.email);
+            setCurrentState("Sign Up");
+            setShowOtpStep(true);
+
+            const secondsLeft = Math.max(
+                0,
+                Math.ceil((pendingSignup.expiresAt - Date.now()) / 1000)
+            );
+            setResendCooldown(Math.min(secondsLeft, 60));
+        } catch (error) {
+            clearPendingSignup();
+        }
+    }, []);
 
     return (
         <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">{
