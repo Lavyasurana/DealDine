@@ -502,6 +502,63 @@ export const confirmCashfreePayment = async (req, res) => {
   }
 };
 
+export const getCashfreePaymentStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const transaction = await Transaction.findOne({
+      gatewayOrderId: orderId,
+      userId: req.user.id,
+    });
+
+    if (!transaction) {
+      return res.status(404).json({
+        success: false,
+        message: "Payment record not found",
+      });
+    }
+
+    if (transaction.status === "approved" && transaction.userCouponId) {
+      return res.json({
+        success: true,
+        status: "approved",
+        couponId: transaction.userCouponId,
+      });
+    }
+
+    const cashfreeOrder = await fetchCashfreeOrder(orderId);
+    const result = await syncCashfreeOrder(transaction, cashfreeOrder);
+
+    if (result.success && result.coupon?._id) {
+      return res.json({
+        success: true,
+        status: "approved",
+        couponId: result.coupon._id,
+      });
+    }
+
+    const refreshedTransaction = await Transaction.findById(transaction._id);
+    const status = refreshedTransaction?.status || "pending";
+
+    return res.json({
+      success: true,
+      status,
+      message: result.message || "Payment is being processed",
+      couponId: refreshedTransaction?.userCouponId || null,
+    });
+  } catch (error) {
+    console.log("Cashfree status error:", error.response?.data || error.message);
+    const statusCode = error instanceof PurchaseError ? error.statusCode : 500;
+    const message = error instanceof PurchaseError
+      ? error.message
+      : "Failed to fetch payment status";
+
+    return res.status(statusCode).json({
+      success: false,
+      message,
+    });
+  }
+};
+
 export const handleCashfreeWebhook = async (req, res) => {
   try {
     const signature = req.headers["x-webhook-signature"];

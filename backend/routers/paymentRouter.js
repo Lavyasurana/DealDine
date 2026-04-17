@@ -2,6 +2,7 @@ import express from "express";
 import {
   confirmCashfreePayment,
   createCashfreeOrder,
+  getCashfreePaymentStatus,
   getCheckoutSummary,
   handleCashfreeWebhook,
   payWithCredits,
@@ -16,6 +17,7 @@ paymentRouter.get("/checkout-summary/:dealId", authMiddleware, getCheckoutSummar
 paymentRouter.post("/pay-with-credits", authMiddleware, csrfMiddleware, payWithCredits);
 paymentRouter.post("/cashfree/order", authMiddleware, csrfMiddleware, createCashfreeOrder);
 paymentRouter.get("/cashfree/confirm/:orderId", authMiddleware, confirmCashfreePayment);
+paymentRouter.get("/cashfree/status/:orderId", authMiddleware, getCashfreePaymentStatus);
 paymentRouter.post("/cashfree/webhook", handleCashfreeWebhook);
 
 export default paymentRouter;

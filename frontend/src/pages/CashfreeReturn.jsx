@@ -28,14 +28,23 @@ export function CashfreeReturn() {
       for (let attempt = 0; attempt < MAX_CONFIRM_RETRIES; attempt += 1) {
         try {
           const { data } = await axios.get(
-            `${backendUrl}/api/payment/cashfree/confirm/${orderId}`,
+            `${backendUrl}/api/payment/cashfree/status/${orderId}`,
             { withCredentials: true }
           );
 
-          if (data.success) {
+          if (data.status === "approved" && data.couponId) {
             await getUser();
-            navigate(`/coupon/${data.coupon._id}`, { replace: true });
+            navigate(`/coupon/${data.couponId}`, { replace: true });
             return;
+          }
+
+          const isPendingStatus = data.status === "created" || data.status === "pending";
+          const hasRetriesLeft = attempt < MAX_CONFIRM_RETRIES - 1;
+
+          if (isPendingStatus && hasRetriesLeft) {
+            setMessage(data.message || "Payment received. Waiting for confirmation from Cashfree...");
+            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+            continue;
           }
 
           setStatus("failed");
@@ -43,12 +52,11 @@ export function CashfreeReturn() {
           return;
         } catch (error) {
           const errorMessage = error.response?.data?.message || "Payment could not be confirmed.";
-          const isPending = errorMessage === "Payment is still pending";
-          const isTemporaryIssue =
-            errorMessage === "This deal is being purchased right now. Please try again.";
+          const responseStatus = error.response?.data?.status;
+          const isPending = responseStatus === "created" || responseStatus === "pending";
           const hasRetriesLeft = attempt < MAX_CONFIRM_RETRIES - 1;
 
-          if ((isPending || isTemporaryIssue) && hasRetriesLeft) {
+          if (isPending && hasRetriesLeft) {
             setMessage("Payment received. Waiting for confirmation from Cashfree...");
             await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
             continue;
