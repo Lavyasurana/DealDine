@@ -80,7 +80,7 @@ export function Checkout() {
     try {
       setPaying(true);
 
-      if (summary.cashAmount === 0) {
+      if (Number(summary.cashAmount) <= 0) {
         const { data } = await axios.post(
           `${backendUrl}/api/payment/pay-with-credits`,
           { dealId },

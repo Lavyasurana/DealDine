@@ -28,23 +28,14 @@ export function CashfreeReturn() {
       for (let attempt = 0; attempt < MAX_CONFIRM_RETRIES; attempt += 1) {
         try {
           const { data } = await axios.get(
-            `${backendUrl}/api/payment/cashfree/status/${orderId}`,
+            `${backendUrl}/api/payment/cashfree/confirm/${orderId}`,
             { withCredentials: true }
           );
 
-          if (data.status === "approved" && data.couponId) {
+          if (data.success && data.coupon?._id) {
             await getUser();
-            navigate(`/coupon/${data.couponId}`, { replace: true });
+            navigate(`/coupon/${data.coupon._id}`, { replace: true });
             return;
-          }
-
-          const isPendingStatus = data.status === "created" || data.status === "pending";
-          const hasRetriesLeft = attempt < MAX_CONFIRM_RETRIES - 1;
-
-          if (isPendingStatus && hasRetriesLeft) {
-            setMessage(data.message || "Payment received. Waiting for confirmation from Cashfree...");
-            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
-            continue;
           }
 
           setStatus("failed");
@@ -52,8 +43,9 @@ export function CashfreeReturn() {
           return;
         } catch (error) {
           const errorMessage = error.response?.data?.message || "Payment could not be confirmed.";
-          const responseStatus = error.response?.data?.status;
-          const isPending = responseStatus === "created" || responseStatus === "pending";
+          const isPending =
+            errorMessage === "Payment is still pending" ||
+            errorMessage === "This deal is being purchased right now. Please try again.";
           const hasRetriesLeft = attempt < MAX_CONFIRM_RETRIES - 1;
 
           if (isPending && hasRetriesLeft) {
