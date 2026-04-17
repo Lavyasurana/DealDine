@@ -3,6 +3,9 @@ import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { rescueContext } from "../context/rescueContext";
 
+const MAX_CONFIRM_RETRIES = 8;
+const RETRY_DELAY_MS = 2000;
+
 export function CashfreeReturn() {
   const [searchParams] = useSearchParams();
   const { backendUrl, navigate, getUser, userLogin, authReady } = useContext(rescueContext);
@@ -22,23 +25,37 @@ export function CashfreeReturn() {
         return;
       }
 
-      try {
-        const { data } = await axios.get(
-          `${backendUrl}/api/payment/cashfree/confirm/${orderId}`,
-          { withCredentials: true }
-        );
+      for (let attempt = 0; attempt < MAX_CONFIRM_RETRIES; attempt += 1) {
+        try {
+          const { data } = await axios.get(
+            `${backendUrl}/api/payment/cashfree/confirm/${orderId}`,
+            { withCredentials: true }
+          );
 
-        if (data.success) {
-          await getUser();
-          navigate(`/coupon/${data.coupon._id}`, { replace: true });
+          if (data.success) {
+            await getUser();
+            navigate(`/coupon/${data.coupon._id}`, { replace: true });
+            return;
+          }
+
+          setStatus("failed");
+          setMessage(data.message || "Payment could not be confirmed.");
+          return;
+        } catch (error) {
+          const errorMessage = error.response?.data?.message || "Payment could not be confirmed.";
+          const isPending = errorMessage === "Payment is still pending";
+          const hasRetriesLeft = attempt < MAX_CONFIRM_RETRIES - 1;
+
+          if (isPending && hasRetriesLeft) {
+            setMessage("Payment received. Waiting for confirmation from Cashfree...");
+            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+            continue;
+          }
+
+          setStatus("failed");
+          setMessage(errorMessage);
           return;
         }
-
-        setStatus("failed");
-        setMessage(data.message || "Payment could not be confirmed.");
-      } catch (error) {
-        setStatus("failed");
-        setMessage(error.response?.data?.message || "Payment could not be confirmed.");
       }
     };
 
