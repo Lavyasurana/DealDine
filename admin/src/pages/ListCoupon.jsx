@@ -58,7 +58,15 @@ const ListCoupons = () => {
               </p>
             </div>
 
-            <div>
+            <div className="text-right">
+              <p className="text-sm text-gray-500">
+                Valid From
+              </p>
+
+              <p className="mb-2">
+                {formatDateTime(deal.validFrom)}
+              </p>
+
               <p className="text-sm text-gray-500">
                 Valid Till
               </p>

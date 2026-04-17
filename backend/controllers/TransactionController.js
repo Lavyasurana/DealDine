@@ -1,5 +1,6 @@
 import axios from "axios";
 import crypto from "node:crypto";
+import mongoose from "mongoose";
 import Transaction from "../models/Transaction.js";
 import userModel from "../models/userModel.js";
 import dealModel from "../models/dealModel.js";
@@ -24,6 +25,15 @@ const ensureCashfreeConfigured = () => {
     throw new Error("Cashfree credentials are missing");
   }
 };
+
+class PurchaseError extends Error {
+  constructor(message, statusCode = 400) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+
+const isDuplicateKeyError = (error) => error?.code === 11000;
 
 const hasReachedClaimLimit = async (dealId, maxRedemptions) => {
   const totalClaims = await UserCoupon.countDocuments({ deal: dealId });
@@ -70,33 +80,94 @@ const buildCheckoutSummary = (user, deal) => {
   };
 };
 
-const settleTransactionCredits = async (transaction) => {
+const runInTransaction = async (work) => {
+  const session = await mongoose.startSession();
+
+  try {
+    let result;
+
+    await session.withTransaction(async () => {
+      result = await work(session);
+    });
+
+    return result;
+  } finally {
+    await session.endSession();
+  }
+};
+
+const reserveDealRedemption = async (deal, session, pendingCouponCount = 0) => {
+  const issuedCouponsCount = Math.max(
+    0,
+    (await UserCoupon.countDocuments({
+      deal: deal._id,
+    }).session(session)) - pendingCouponCount
+  );
+
+  const currentRedeemedCount = Math.max(
+    Number(deal.redeemedCount) || 0,
+    issuedCouponsCount
+  );
+
+  if (currentRedeemedCount >= deal.maxRedemptions) {
+    throw new PurchaseError("This deal is no longer available");
+  }
+
+  const updatedDeal = await dealModel.findOneAndUpdate(
+    {
+      _id: deal._id,
+      redeemedCount: Number(deal.redeemedCount) || 0,
+    },
+    {
+      $set: { redeemedCount: currentRedeemedCount + 1 },
+    },
+    {
+      new: true,
+      session,
+    }
+  );
+
+  if (!updatedDeal) {
+    throw new PurchaseError("This deal is being purchased right now. Please try again.");
+  }
+
+  return updatedDeal;
+};
+
+const settleTransactionCredits = async (transaction, session) => {
   if (!transaction || transaction.creditsSettled || !transaction.creditsApplied) {
     return;
   }
 
-  const user = await userModel.findById(transaction.userId);
+  const user = await userModel.findOneAndUpdate(
+    {
+      _id: transaction.userId,
+      credits: { $gte: transaction.creditsApplied },
+    },
+    {
+      $inc: { credits: -transaction.creditsApplied },
+    },
+    {
+      new: true,
+      session,
+    }
+  );
 
   if (!user) {
-    throw new Error("User not found while applying credits");
+    throw new PurchaseError("User does not have enough credits to settle this transaction");
   }
-
-  if (user.credits < transaction.creditsApplied) {
-    throw new Error("User does not have enough credits to settle this transaction");
-  }
-
-  user.credits -= transaction.creditsApplied;
-  await user.save();
 
   transaction.creditsSettled = true;
-  await transaction.save();
+  await transaction.save({ session });
+
+  return user;
 };
 
-const issueCouponForTransaction = async (transaction) => {
+const issueCouponForTransaction = async (transaction, session) => {
   if (transaction.userCouponId) {
-    const coupon = await UserCoupon.findById(transaction.userCouponId).populate("deal");
+    const coupon = await UserCoupon.findById(transaction.userCouponId).session(session);
     if (coupon) {
-      return coupon;
+      return { coupon, created: false };
     }
   }
 
@@ -104,32 +175,70 @@ const issueCouponForTransaction = async (transaction) => {
     user: transaction.userId,
     deal: transaction.dealId,
     isUsed: false,
-  }).populate("deal");
+  }).session(session);
 
   if (existingCoupon) {
     transaction.userCouponId = existingCoupon._id;
     transaction.status = "approved";
-    await transaction.save();
-    return existingCoupon;
+    await transaction.save({ session });
+    return { coupon: existingCoupon, created: false };
   }
 
-  const coupon = await UserCoupon.create({
-    user: transaction.userId,
-    deal: transaction.dealId,
-  });
+  try {
+    const [coupon] = await UserCoupon.create(
+      [
+        {
+          user: transaction.userId,
+          deal: transaction.dealId,
+        },
+      ],
+      { session }
+    );
 
-  await coupon.populate("deal");
-  await coupon.populate("user");
+    const deal = await dealModel.findById(transaction.dealId).session(session);
+    if (!deal) {
+      throw new PurchaseError("Deal not found", 404);
+    }
 
-  if (coupon.user?.email) {
+    await reserveDealRedemption(deal, session, 1);
+
+    transaction.userCouponId = coupon._id;
+    transaction.status = "approved";
+    await transaction.save({ session });
+
+    return { coupon, created: true };
+  } catch (error) {
+    if (!isDuplicateKeyError(error)) {
+      throw error;
+    }
+
+    const coupon = await UserCoupon.findOne({
+      user: transaction.userId,
+      deal: transaction.dealId,
+      isUsed: false,
+    }).session(session);
+
+    if (!coupon) {
+      throw error;
+    }
+
+    transaction.userCouponId = coupon._id;
+    transaction.status = "approved";
+    await transaction.save({ session });
+
+    return { coupon, created: false };
+  }
+};
+
+const populateCoupon = async (couponId) =>
+  UserCoupon.findById(couponId)
+    .populate("deal")
+    .populate("user");
+
+const maybeSendCouponEmail = async (coupon, shouldSend) => {
+  if (shouldSend && coupon?.user?.email) {
     await sendCouponPurchaseEmail(coupon.user.email, coupon);
   }
-
-  transaction.userCouponId = coupon._id;
-  transaction.status = "approved";
-  await transaction.save();
-
-  return coupon;
 };
 
 const getBackendPublicUrl = (req) =>
@@ -179,11 +288,16 @@ const syncCashfreeOrder = async (transaction, cashfreeOrder, gatewayPaymentId) =
     return { success: false, message: "Transaction not found" };
   }
 
-  if (gatewayPaymentId) {
-    transaction.gatewayPaymentId = gatewayPaymentId;
+  if (transaction.status === "approved" && transaction.userCouponId) {
+    const coupon = await populateCoupon(transaction.userCouponId);
+    return { success: true, coupon };
   }
 
   if (cashfreeOrder.order_status !== "PAID") {
+    if (gatewayPaymentId) {
+      transaction.gatewayPaymentId = gatewayPaymentId;
+    }
+
     transaction.status = cashfreeOrder.order_status === "ACTIVE" ? "pending" : "rejected";
     await transaction.save();
     return {
@@ -194,8 +308,36 @@ const syncCashfreeOrder = async (transaction, cashfreeOrder, gatewayPaymentId) =
     };
   }
 
-  await settleTransactionCredits(transaction);
-  const coupon = await issueCouponForTransaction(transaction);
+  const { couponId, created } = await runInTransaction(async (session) => {
+    const transactionInSession = await Transaction.findById(transaction._id).session(session);
+
+    if (!transactionInSession) {
+      throw new PurchaseError("Transaction not found", 404);
+    }
+
+    if (gatewayPaymentId) {
+      transactionInSession.gatewayPaymentId = gatewayPaymentId;
+    }
+
+    if (transactionInSession.status === "approved" && transactionInSession.userCouponId) {
+      return {
+        couponId: transactionInSession.userCouponId,
+        created: false,
+      };
+    }
+
+    await settleTransactionCredits(transactionInSession, session);
+    const { coupon, created } = await issueCouponForTransaction(transactionInSession, session);
+
+    return {
+      couponId: coupon._id,
+      created,
+    };
+  });
+
+  const coupon = await populateCoupon(couponId);
+  await maybeSendCouponEmail(coupon, created);
+
   return { success: true, coupon };
 };
 
@@ -209,6 +351,7 @@ export const getCheckoutSummary = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: validation.error,
+        existingCouponId: validation.existingCoupon?._id || null,
       });
     }
 
@@ -338,9 +481,13 @@ export const confirmCashfreePayment = async (req, res) => {
     });
   } catch (error) {
     console.log("Cashfree confirm error:", error.response?.data || error.message);
-    return res.status(500).json({
+    const statusCode = error instanceof PurchaseError ? error.statusCode : 500;
+    const message = error instanceof PurchaseError
+      ? error.message
+      : "Failed to verify payment";
+    return res.status(statusCode).json({
       success: false,
-      message: "Failed to verify payment",
+      message,
     });
   }
 };
@@ -383,49 +530,91 @@ export const payWithCredits = async (req, res) => {
   try {
     const userId = req.user.id;
     const { dealId } = req.body;
-    const validation = await validateDealPurchase(userId, dealId);
+    const { couponId, remainingCredits, created } = await runInTransaction(async (session) => {
+      const user = await userModel.findById(userId).session(session);
+      const deal = await dealModel.findById(dealId).session(session);
 
-    if (validation.error) {
-      return res.status(400).json({
-        success: false,
-        message: validation.error,
-      });
-    }
+      if (!user || !deal) {
+        throw new PurchaseError("Invalid user or deal");
+      }
 
-    const { user, deal } = validation;
+      const existingCoupon = await UserCoupon.findOne({
+        user: userId,
+        deal: dealId,
+        isUsed: false,
+      }).session(session);
 
-    const summary = buildCheckoutSummary(user, deal);
+      if (existingCoupon) {
+        throw new PurchaseError("You already own this coupon");
+      }
 
-    if (summary.cashAmount > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Not enough credits",
-      });
-    }
+      const summary = buildCheckoutSummary(user, deal);
 
-    user.credits -= summary.dealPrice;
-    await user.save();
+      if (summary.cashAmount > 0) {
+        throw new PurchaseError("Not enough credits");
+      }
 
-    const coupon = await UserCoupon.create({
-      user: userId,
-      deal: dealId,
+      const updatedUser = await userModel.findOneAndUpdate(
+        {
+          _id: userId,
+          credits: { $gte: summary.dealPrice },
+        },
+        {
+          $inc: { credits: -summary.dealPrice },
+        },
+        {
+          new: true,
+          session,
+        }
+      );
+
+      if (!updatedUser) {
+        throw new PurchaseError("Not enough credits");
+      }
+
+      try {
+        const [coupon] = await UserCoupon.create(
+          [
+            {
+              user: userId,
+              deal: dealId,
+            },
+          ],
+          { session }
+        );
+
+        await reserveDealRedemption(deal, session, 1);
+
+        return {
+          couponId: coupon._id,
+          remainingCredits: updatedUser.credits,
+          created: true,
+        };
+      } catch (error) {
+        if (!isDuplicateKeyError(error)) {
+          throw error;
+        }
+
+        throw new PurchaseError("You already own this coupon");
+      }
     });
 
-    await coupon.populate("deal");
-    await coupon.populate("user");
-    await sendCouponPurchaseEmail(coupon.user.email, coupon);
+    const coupon = await populateCoupon(couponId);
+    await maybeSendCouponEmail(coupon, created);
 
     return res.json({
       success: true,
       message: "Deal unlocked using credits 🎉",
       coupon,
-      remainingCredits: user.credits,
+      remainingCredits,
     });
   } catch (error) {
     console.log(error);
-    return res.status(500).json({
+    const statusCode = error instanceof PurchaseError ? error.statusCode : 500;
+    const message = error instanceof PurchaseError ? error.message : "Server error";
+    return res.status(statusCode).json({
       success: false,
-      message: "Server error",
+      message,
     });
   }
 };

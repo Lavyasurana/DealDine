@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -6,19 +6,24 @@ import { Clock } from "lucide-react";
 import { rescueContext } from "../context/rescueContext";
 import { formatDate, formatTime } from "../utils/dateTime";
 
+const CASHFREE_APPROVED_ORIGIN = "https://www.dealdine.in";
+
 export function Checkout() {
   const { dealId } = useParams();
-  const { backendUrl, navigate, getUser } = useContext(rescueContext);
+  const { backendUrl, navigate, getUser, userLogin, authReady } = useContext(rescueContext);
   const [deal, setDeal] = useState(null);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
+  const handledLoadFailureRef = useRef(false);
 
   useEffect(() => {
     const loadCheckout = async () => {
-      const token = localStorage.getItem("token");
+      if (!authReady) {
+        return;
+      }
 
-      if (!token) {
+      if (!userLogin) {
         navigate("/login", { replace: true });
         return;
       }
@@ -26,13 +31,14 @@ export function Checkout() {
       try {
         const { data } = await axios.get(
           `${backendUrl}/api/payment/checkout-summary/${dealId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { withCredentials: true }
         );
 
         if (!data.success) {
-          toast.error(data.message || "Failed to load checkout");
+          if (!handledLoadFailureRef.current) {
+            handledLoadFailureRef.current = true;
+            toast.error(data.message || "Failed to load checkout");
+          }
           navigate(`/getDeals/${dealId}`, { replace: true });
           return;
         }
@@ -40,7 +46,21 @@ export function Checkout() {
         setDeal(data.deal);
         setSummary(data.summary);
       } catch (error) {
-        toast.error(error.response?.data?.message || "Failed to load checkout");
+        const existingCouponId = error.response?.data?.existingCouponId;
+
+        if (existingCouponId) {
+          if (!handledLoadFailureRef.current) {
+            handledLoadFailureRef.current = true;
+            toast.info("You already own this coupon");
+          }
+          navigate(`/coupon/${existingCouponId}`, { replace: true });
+          return;
+        }
+
+        if (!handledLoadFailureRef.current) {
+          handledLoadFailureRef.current = true;
+          toast.error(error.response?.data?.message || "Failed to load checkout");
+        }
         navigate(`/getDeals/${dealId}`, { replace: true });
       } finally {
         setLoading(false);
@@ -48,12 +68,10 @@ export function Checkout() {
     };
 
     loadCheckout();
-  }, [backendUrl, dealId, navigate]);
+  }, [authReady, backendUrl, dealId, navigate, userLogin]);
 
   const payHandler = async () => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
+    if (!userLogin) {
       toast.error("Please login first");
       navigate("/login");
       return;
@@ -66,9 +84,7 @@ export function Checkout() {
         const { data } = await axios.post(
           `${backendUrl}/api/payment/pay-with-credits`,
           { dealId },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { withCredentials: true }
         );
 
         if (!data.success) {
@@ -82,6 +98,11 @@ export function Checkout() {
         return;
       }
 
+      if (window.location.origin !== CASHFREE_APPROVED_ORIGIN) {
+        window.location.href = `${CASHFREE_APPROVED_ORIGIN}/checkout/${dealId}`;
+        return;
+      }
+
       if (!window.Cashfree) {
         toast.error("Cashfree checkout is not available right now");
         return;
@@ -90,9 +111,7 @@ export function Checkout() {
       const { data } = await axios.post(
         `${backendUrl}/api/payment/cashfree/order`,
         { dealId },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { withCredentials: true }
       );
 
       if (!data.success) {
@@ -147,11 +166,11 @@ export function Checkout() {
             <p className="text-gray-600">{deal.location}</p>
             <div className="flex items-center gap-2 text-gray-500">
               <Clock className="w-4 h-4" />
-              <p>
-                {formatDate(deal.validFrom)} | {formatTime(deal.validFrom)}{" "}
-                -{" "}
-                {formatTime(deal.validTill)}
-              </p>
+              <p>Valid from: {formatDate(deal.validFrom)} | {formatTime(deal.validFrom)}</p>
+            </div>
+            <div className="flex items-center gap-2 text-gray-500">
+              <Clock className="w-4 h-4" />
+              <p>Valid till: {formatDate(deal.validTill)} | {formatTime(deal.validTill)}</p>
             </div>
           </div>
         </div>

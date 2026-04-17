@@ -5,16 +5,18 @@ import { rescueContext } from "../context/rescueContext";
 
 export function CashfreeReturn() {
   const [searchParams] = useSearchParams();
-  const { backendUrl, navigate, getUser } = useContext(rescueContext);
+  const { backendUrl, navigate, getUser, userLogin, authReady } = useContext(rescueContext);
   const [status, setStatus] = useState("verifying");
   const [message, setMessage] = useState("Verifying your payment...");
 
   useEffect(() => {
     const confirmPayment = async () => {
       const orderId = searchParams.get("order_id");
-      const token = localStorage.getItem("token");
+      if (!authReady) {
+        return;
+      }
 
-      if (!orderId || !token) {
+      if (!orderId || !userLogin) {
         setStatus("failed");
         setMessage("Missing payment details. Please log in and try again.");
         return;
@@ -23,9 +25,7 @@ export function CashfreeReturn() {
       try {
         const { data } = await axios.get(
           `${backendUrl}/api/payment/cashfree/confirm/${orderId}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+          { withCredentials: true }
         );
 
         if (data.success) {
@@ -43,7 +43,7 @@ export function CashfreeReturn() {
     };
 
     confirmPayment();
-  }, [backendUrl, getUser, navigate, searchParams]);
+  }, [authReady, backendUrl, getUser, navigate, searchParams, userLogin]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">

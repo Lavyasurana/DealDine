@@ -15,15 +15,9 @@ export function CouponPage() {
   useEffect(() => {
     const fetchCoupon = async () => {
       try {
-        const token = localStorage.getItem("token");
-
         const { data } = await axios.get(
           `${backendUrl}/coupon/${couponId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
+          { withCredentials: true }
         );
 
         if (data.success) {
@@ -39,7 +33,7 @@ export function CouponPage() {
 
   // 🔥 SMART COUNTDOWN
   useEffect(() => {
-    if (!coupon) return;
+    if (!coupon?.deal) return;
 
     const expiry =
       coupon.deal.validTill || coupon.deal.expiryDate;
@@ -90,6 +84,14 @@ export function CouponPage() {
 
   if (!coupon) {
     return <div className="p-10 text-center">Loading coupon...</div>;
+  }
+
+  if (!coupon.deal) {
+    return (
+      <div className="p-10 text-center text-gray-600">
+        This coupon&apos;s deal is no longer available.
+      </div>
+    );
   }
 
   // ✅ STATUS LOGIC

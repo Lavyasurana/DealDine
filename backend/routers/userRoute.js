@@ -1,23 +1,26 @@
 import express from 'express'
-import { userLogin, userRegister ,verifySignupOtp,resendSignupOtp,getCurrentUser,updateCurrentUser,forgotPassword,resetPassword, sendContact, handleResendWebhook} from '../controllers/userController.js';
+import { userLogin, userRegister ,verifySignupOtp,resendSignupOtp,getCurrentUser,updateCurrentUser,logoutUser,forgotPassword,resetPassword, sendContact, handleResendWebhook} from '../controllers/userController.js';
 import { authMiddleware } from '../middleware/authmiddleware.js';
+import { csrfMiddleware } from '../middleware/csrfMiddleware.js';
+import { forgotPasswordLimiter, loginLimiter, otpResendLimiter, otpVerifyLimiter, resetPasswordLimiter } from '../services/rateLimit.js';
 import NotiTokenModel from '../models/NotiToken.js';
 const userRouter=express.Router();
 
-userRouter.post('/login',userLogin)
+userRouter.post('/login',loginLimiter,userLogin)
 userRouter.post('/register',userRegister)
-userRouter.post('/verify-otp',verifySignupOtp)
-userRouter.post('/resend-otp',resendSignupOtp)
+userRouter.post('/verify-otp',otpVerifyLimiter,verifySignupOtp)
+userRouter.post('/resend-otp',otpResendLimiter,resendSignupOtp)
 userRouter.get('/me', authMiddleware, getCurrentUser);
-userRouter.put('/me', authMiddleware, updateCurrentUser);
-userRouter.post('/forgot-password', forgotPassword);
-userRouter.post('/reset-password', resetPassword);
+userRouter.put('/me', authMiddleware, csrfMiddleware, updateCurrentUser);
+userRouter.post('/logout', authMiddleware, csrfMiddleware, logoutUser);
+userRouter.post('/forgot-password', forgotPasswordLimiter, forgotPassword);
+userRouter.post('/reset-password', resetPasswordLimiter, resetPassword);
 userRouter.post("/contact", sendContact);
 userRouter.post("/email/webhook", handleResendWebhook);
 
 
 
-userRouter.post("/save-token", authMiddleware, async (req, res) => {
+userRouter.post("/save-token", authMiddleware, csrfMiddleware, async (req, res) => {
     try {
       const { token } = req.body;
       
@@ -38,7 +41,7 @@ userRouter.post("/save-token", authMiddleware, async (req, res) => {
     }
   });
 
-  userRouter.post("/remove-token", authMiddleware, async (req, res) => {
+  userRouter.post("/remove-token", authMiddleware, csrfMiddleware, async (req, res) => {
     const { token } = req.body;
   
     await NotiTokenModel.deleteOne({ token });

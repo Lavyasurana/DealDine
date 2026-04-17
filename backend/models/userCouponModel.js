@@ -35,6 +35,14 @@ const userCouponSchema = new mongoose.Schema({
 
 });
 
+userCouponSchema.index(
+  { user: 1, deal: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { isUsed: false }
+  }
+);
+
 const UserCoupon = mongoose.model("UserCoupon", userCouponSchema);
 
 export default UserCoupon;

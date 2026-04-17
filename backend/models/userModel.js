@@ -16,7 +16,7 @@ const userSchema = new mongoose.Schema({
 
   phone: { type: String, required: true,unique:true },
 
-  credits:{type:Number,default:100},
+  credits:{type:Number,default:0},
 
   issuedCoupons: [
     {

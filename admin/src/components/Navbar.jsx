@@ -1,18 +1,21 @@
 import React, { useContext } from "react"
-import { useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import {adminContext} from "../context/adminContext"
+import axios from "axios";
 
 const Navbar = () => {
 
   const navigate = useNavigate()
   
  
+  const{adminLogin,setAdminLogin,backendUrl}=useContext(adminContext)
 
-  const{adminLogin,setAdminLogin}=useContext(adminContext)
-
-  const logout = () => {
-    localStorage.removeItem("adminToken")
+  const logout = async () => {
+    try {
+      await axios.post(`${backendUrl}/api/admin/logout`, {}, { withCredentials: true });
+    } catch (_error) {
+      // Clear local auth state regardless of request result.
+    }
     setAdminLogin(false);
     navigate("/login")
   }
@@ -32,7 +35,7 @@ const Navbar = () => {
       {/* Right Side */}
       <div>
 
-        {!adminLogin && !localStorage.getItem("adminToken") ? (
+        {!adminLogin ? (
 
           <button
             onClick={()=>navigate("/login")}

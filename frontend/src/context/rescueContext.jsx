@@ -15,39 +15,23 @@ const RescueProvider = (props) => {
     const [user, setUser] = useState(null);
 
     const clearAuthState = () => {
-      localStorage.removeItem("token");
-      delete axios.defaults.headers.common["Authorization"];
       setUserLogin(false);
       setUser(null);
     };
 
     useEffect(() => {
       const initAuth = async () => {
-        const token = localStorage.getItem("token");
-    
-        if (!token) {
-          setAuthReady(true);
-          return;
-        }
-    
         try {
-          // set header
-          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    
-          // 🔥 verify token by calling backend
-          const res = await axios.get(`${backendUrl}/api/user/me`);
+          const res = await axios.get(`${backendUrl}/api/user/me`, { withCredentials: true });
     
           if (res.data.success) {
             setUser(res.data.user);
             setUserLogin(true);
           } else {
-            throw new Error("Invalid token");
+            clearAuthState();
           }
     
         } catch (err) {
-          console.log("Token invalid or expired");
-    
-          // ❌ remove bad token
           clearAuthState();
         } finally {
           setAuthReady(true);
@@ -57,7 +41,12 @@ const RescueProvider = (props) => {
       initAuth();
     }, [backendUrl]);
 
-    const logout = () => {
+    const logout = async () => {
+        try {
+          await axios.post(`${backendUrl}/api/user/logout`, {}, { withCredentials: true });
+        } catch (_error) {
+          // Client state is cleared even if logout request fails.
+        }
         clearAuthState();
         navigate("/");
     };
@@ -80,7 +69,7 @@ const RescueProvider = (props) => {
 
     const getUser = async () => {
         try {
-          const res = await axios.get(`${backendUrl}/api/user/me`);
+          const res = await axios.get(`${backendUrl}/api/user/me`, { withCredentials: true });
       
           if (res.data.success) {
             setUser(res.data.user);

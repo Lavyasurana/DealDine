@@ -2,12 +2,13 @@ import React, { useContext, useState, useRef, useEffect } from "react";
 import { Menu, X, User } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { rescueContext } from "../context/rescueContext";
-import logo from '../assets/logo.png'
+import logo from '../assets/logo.jpeg'
+import axios from "axios";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const [isUserOpen, setIsUserOpen] = useState(false);
-  const { userLogin, setUserLogin, logout,backendUrl } = useContext(rescueContext);
+  const { userLogin, logout,backendUrl } = useContext(rescueContext);
   const userRef = useRef();
   const navigate = useNavigate();
 
@@ -26,21 +27,18 @@ export default function Navbar() {
 
   // Logout function
   const handleLogout = async() => {
-    setUserLogin(false); // update context
     setIsUserOpen(false);
     setIsOpen(false);
-    navigate("/");
-    logout();
+    await logout();
     const fcmToken = localStorage.getItem("fcmToken");
-    const authToken = localStorage.getItem("token");
-    await fetch(`${backendUrl}/api/user/remove-token`, {
-      method: "POST",
-      body: JSON.stringify({ token:fcmToken }),
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${authToken}`
-      }
-    });
+    if (fcmToken) {
+      await axios.post(
+        `${backendUrl}/api/user/remove-token`,
+        { token: fcmToken },
+        { withCredentials: true }
+      );
+    }
+    navigate("/");
   };
   
 
@@ -49,12 +47,14 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
 
         {/* Logo */}
-        <Link to="/" className="flex items-center">
-          <img
-            src={logo}
-            alt="Rescue"
-            className="h-15 w-30 "
-          />
+        <Link to="/" className="flex items-center shrink-0">
+          <div className="h-12 w-[190px] overflow-hidden sm:h-14 sm:w-[230px] curoser-pointer">
+            <img
+              src={logo}
+              alt="DealDine"
+              className="w-full h-auto -translate-y-[37%] curoser-pointer"
+            />
+          </div>
         </Link>
 
         {/* Desktop Links */}

@@ -59,9 +59,7 @@ export function Login() {
         clearPendingSignup();
     };
 
-    const completeLogin = async (token) => {
-        localStorage.setItem("token", token);
-        axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    const completeLogin = async () => {
         setUserLogin(true);
         await getUser();
         navigate("/");
@@ -106,7 +104,7 @@ export function Login() {
                     );
 
                     if (response.data.success) {
-                        await completeLogin(response.data.token);
+                        await completeLogin();
                         toast.success("Account created successfully");
                         resetSignupForm();
                     } else {
@@ -149,7 +147,7 @@ export function Login() {
     
                 if (response.data.success) {
     
-                    await completeLogin(response.data.token);
+                    await completeLogin();
     
                     toast.success("Successfully logged in");
                 } else {

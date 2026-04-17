@@ -23,7 +23,9 @@ export function Profile() {
             formData.append('restaurantName', restaurantName);
             formData.append('location', location);
             formData.append('town', town);
-            formData.append('image', image);
+            if (image) {
+                formData.append('image', image);
+            }
 
             const result = await axios.post(
                 backendUrl + "/api/admin/profile",
@@ -106,7 +108,8 @@ export function Profile() {
                         <input
                             type="file"
                             hidden
-                            required
+                            name="image"
+                            accept="image/*"
                             onChange={(e) => setImage(e.target.files[0])}
                         />
                     </label>

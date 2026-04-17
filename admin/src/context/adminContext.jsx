@@ -7,24 +7,25 @@ export const adminContext = createContext();
 const AdminProvider = (props) => {
 
   const [adminLogin, setAdminLogin] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
   const navigate=useNavigate();
-
-  useEffect(() => {
-
-    const token = localStorage.getItem("adminToken");
-
-    if (token) {
-      setAdminLogin(true);
-
-      // Restore Authorization header
-      axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    }
-
-  }, []);
-
   const backendUrl =import.meta.env.VITE_backend_Url;
 
-  const value = { adminLogin, setAdminLogin,backendUrl,navigate };
+  useEffect(() => {
+    const initSession = async () => {
+      try {
+        const response = await axios.get(`${backendUrl}/api/admin/me`, { withCredentials: true });
+        setAdminLogin(Boolean(response.data?.success));
+      } catch (_error) {
+        setAdminLogin(false);
+      } finally {
+        setAuthReady(true);
+      }
+    };
+    initSession();
+  }, [backendUrl]);
+
+  const value = { adminLogin, setAdminLogin, authReady, backendUrl, navigate };
 
   return (
     <adminContext.Provider value={value}>

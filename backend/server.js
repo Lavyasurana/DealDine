@@ -9,6 +9,7 @@ import adminRouter from './routers/adminRouter.js';
 import helmet from "helmet";
 import { connectCloudinary } from './config/cloudinary.js';
 import paymentRouter from './routers/paymentRouter.js';
+import cookieParser from "cookie-parser";
 
 const app = express();
 const PORT = process.env.PORT || 5111;
@@ -29,10 +30,7 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
     origin: function (origin, callback) {
       if (!origin) return callback(null, true);
   
-      if (
-        allowedOrigins.includes(origin) ||
-        origin.includes("vercel.app")
-      ) {
+      if (allowedOrigins.includes(origin)) {
         return callback(null, true);
       } else {
         console.log("❌ Blocked by CORS:", origin);
@@ -41,9 +39,10 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
+    allowedHeaders: ["Content-Type", "Authorization", "x-csrf-token"]
   };
 app.use(cors(corsOptions));
+app.use(cookieParser());
 
 
 app.use(express.json({
@@ -51,7 +50,20 @@ app.use(express.json({
     req.rawBody = buf.toString("utf8");
   }
 }));
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "https:"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+      imgSrc: ["'self'", "data:", "blob:", "https:"],
+      connectSrc: ["'self'", "https:"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'self'"]
+    }
+  }
+}));
 
 // Routes
 app.use('/api/deals', dealRouter);

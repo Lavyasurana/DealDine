@@ -13,24 +13,23 @@ export function Profile() {
   const [phone, setPhone] = useState("");
   const [savingPhone, setSavingPhone] = useState(false);
 
-  const { backendUrl,userCredits, clearAuthState, navigate } = useContext(rescueContext);
+  const { backendUrl,userCredits, clearAuthState, navigate, userLogin, authReady } = useContext(rescueContext);
 
   useEffect(() => {
     const fetchData = async () => {
-      const token = localStorage.getItem("token");
-      if (!token) return;
+      if (!authReady) return;
+      if (!userLogin) {
+        navigate("/login");
+        return;
+      }
 
       try {
-        const userRes = await axios.get(`${backendUrl}/api/user/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const userRes = await axios.get(`${backendUrl}/api/user/me`, { withCredentials: true });
 
         setUser(userRes.data.user);
         setPhone(userRes.data.user.phone || "");
 
-        const couponRes = await axios.get(`${backendUrl}/coupon/my`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        const couponRes = await axios.get(`${backendUrl}/coupon/my`, { withCredentials: true });
 
         if (couponRes.data.success) {
           setCoupons(couponRes.data.coupons);
@@ -46,13 +45,11 @@ export function Profile() {
     };
 
     fetchData();
-  }, [backendUrl, clearAuthState, navigate]);
+  }, [authReady, backendUrl, clearAuthState, navigate, userLogin]);
 
   const savePhoneNumber = async () => {
     try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
+      if (!userLogin) {
         clearAuthState();
         navigate("/login");
         return;
@@ -63,9 +60,7 @@ export function Profile() {
       const { data } = await axios.put(
         `${backendUrl}/api/user/me`,
         { phone },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { withCredentials: true }
       );
 
       if (data.success) {

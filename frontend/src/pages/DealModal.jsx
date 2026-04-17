@@ -4,18 +4,16 @@ import { useEffect, useContext, useState } from "react";
 import { rescueContext } from "../context/rescueContext";
 import DiscountCard from "../components/DiscountCard";
 import { toast } from "react-toastify";
-import axios from "axios";
 import { formatDateTime } from "../utils/dateTime";
 
 
 export function DealModal() {
   const { dealId } = useParams();
 
-  const { liveDeals, backendUrl, navigate, userCredits,setUser,userLogin } =
+  const { liveDeals, navigate, userLogin } =
     useContext(rescueContext);
 
   const [open, setOpen] = useState(false);
-  const [loadingCredits, setLoadingCredits] = useState(false);
   const deal = liveDeals.find((d) => d._id === dealId);
 
   useEffect(() => {
@@ -31,53 +29,13 @@ export function DealModal() {
   );
 
   const checkoutHandler = () => {
-    const token = localStorage.getItem("token");
-
-    if (!token) {
+    if (!userLogin) {
       toast.error("Please login first");
       navigate("/login");
       return;
     }
 
     navigate(`/checkout/${dealId}`);
-  };
-
-  // ================= CREDITS =================
-  const payWithCreditsHandler = async () => {
-    try {
-      setLoadingCredits(true);
-
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        toast.error("Please login first");
-        return navigate("/login");
-      }
-
-      const { data } = await axios.post(
-        `${backendUrl}/api/payment/pay-with-credits`,
-        { dealId },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
-
-      if (data.success) {
-        toast.success(data.message);
-        setUser((prev) => ({
-          ...prev,
-          credits: data.remainingCredits,
-        }));
-        navigate(`/coupon/${data.coupon._id}`);
-      } else {
-        toast.error(data.message);
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error("Something went wrong");
-    } finally {
-      setLoadingCredits(false);
-    }
   };
 
   // ================= UI =================
@@ -117,35 +75,15 @@ export function DealModal() {
             <div className="pt-4 border-t space-y-3">
               <span className="text-3xl font-bold">₹{deal.price}</span>
 
-              {/* Cashfree */}
               <button
                 onClick={checkoutHandler}
-                className="w-full bg-black text-white py-3 rounded-xl hover:bg-gray-800 transition disabled:bg-gray-500"
+                className="w-full bg-black text-white py-3 rounded-xl hover:bg-gray-800 transition"
               >
-                Pay
+                Continue to Checkout
               </button>
-
-              {/* Credits */}
-            
-              <button
-                onClick={payWithCreditsHandler}
-                disabled={userCredits < deal.price || loadingCredits || !userLogin}
-                className={`w-full py-3 rounded-xl transition ${
-                  userCredits >= deal.price
-                    ? "bg-green-600 hover:bg-green-700 text-white"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
-              >
-                {loadingCredits
-                  ? "Processing..."
-                  : `Use Credits (₹${userCredits})`}
-              </button>
-
-              {userCredits < deal.price && (
-                <p className="text-sm text-red-500 text-center">
-                  {userLogin?"Not enough credits":"Create an account and get 50 credits"}
-                </p>
-              )}
+              <p className="text-sm text-gray-500 text-center">
+                Credits are automatically applied on the checkout page.
+              </p>
             </div>
 
             {/* TERMS */}

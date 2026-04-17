@@ -5,6 +5,7 @@ import top from "../assets/top.png";
 import { rescueContext } from "../context/rescueContext";
 import { getToken } from "firebase/messaging";
 import { messaging } from "../firebase/firebase";
+import axios from "axios";
 export default function Home() {
   const { liveDeals, loading,backendUrl,user,userLogin } = useContext(rescueContext);
 
@@ -76,6 +77,9 @@ useEffect(() => {
 
 
   const handleEnableNotifications = async () => {
+    if (!userLogin) {
+      return;
+    }
     const permission = await Notification.requestPermission();
   
     if (permission === "granted") {
@@ -90,16 +94,11 @@ useEffect(() => {
   
         console.log("🔥 FCM Token:", fcmToken);
   
-        const authToken = localStorage.getItem("token");
-  
-        await fetch(`${backendUrl}/api/user/save-token`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${authToken}`
-          },
-          body: JSON.stringify({ token: fcmToken })
-        });
+        await axios.post(
+          `${backendUrl}/api/user/save-token`,
+          { token: fcmToken },
+          { withCredentials: true }
+        );
   
         localStorage.setItem("fcmToken", fcmToken);
   

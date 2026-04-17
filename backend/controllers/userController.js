@@ -5,9 +5,10 @@ import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
 import nodemailer from "nodemailer";
 import { sendContactEmail, sendVerificationOtpEmail } from "../services/emailService.js";
+import { clearCsrfCookie, setCsrfCookie } from "../middleware/csrfMiddleware.js";
 
 const createToken=async(id)=>{
-    const token= jwt.sign({id},process.env.JWT_SECRET_KEY, { expiresIn: "1d" })
+    const token= jwt.sign({ id, tokenType: "access" },process.env.JWT_SECRET_KEY, { expiresIn: "1d" })
     return token;
 
 }
@@ -17,8 +18,35 @@ const OTP_EXPIRY_MS = 10 * 60 * 1000;
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
 const OTP_BLOCK_MS = 10 * 60 * 1000;
+const MIN_PASSWORD_LENGTH = 8;
 
 const normalizeEmail = (email = "") => email.toLowerCase().trim();
+const normalizePhone = (phone = "") => String(phone).trim();
+const normalizeUserId = (userId = "") => String(userId).trim();
+
+const getAuthCookieOptions = () => ({
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  maxAge: 24 * 60 * 60 * 1000
+});
+
+const setAuthCookie = (res, token) => {
+  res.cookie("access_token", token, getAuthCookieOptions());
+  setCsrfCookie(res);
+};
+
+const clearAuthCookie = (res) => {
+  res.clearCookie("access_token", getAuthCookieOptions());
+  clearCsrfCookie(res);
+};
+
+const isStrongPassword = (password = "") =>
+  typeof password === "string" &&
+  password.length >= MIN_PASSWORD_LENGTH &&
+  /[A-Z]/.test(password) &&
+  /[a-z]/.test(password) &&
+  /[0-9]/.test(password);
 
 const buildOtpPayload = () => {
   const now = new Date();
@@ -34,14 +62,17 @@ const buildOtpPayload = () => {
 const userLogin=async(req,res)=>{
     try{
         const {email,password}=req.body;
+        if (!email || !password) {
+            return res.status(400).json({ success: false, message: "Email and password are required" });
+        }
         const normalizedEmail = normalizeEmail(email);
         const user= await userModel.findOne({ email: normalizedEmail })
         if(!user)
-            return res.json({success:false,message:"User does not exist"})
+            return res.json({success:false,message:"user or password wrong"})
     
         const isMatch=await bcrypt.compare(password,user.password);
         if(!isMatch)
-            return res.json({success:false,message:"Enter valid password"})
+            return res.json({success:false,message:"user or password wrong"})
           
         if (!user.isVerified) {
           return res.json({
@@ -51,8 +82,8 @@ const userLogin=async(req,res)=>{
       }
     
         const token=await createToken(user._id)
-        res.json({success:true,token,user_name:user.name,user_id:user._id})
-        console.log("token:",token)
+        setAuthCookie(res, token);
+        res.json({success:true,user_name:user.name,user_id:user._id})
     
     
     
@@ -69,19 +100,33 @@ const userRegister=async(req,res)=>{
         
         const{firstName,lastName,email,password,phone,userId}=req.body;
         const normalizedEmail = normalizeEmail(email);
+        const normalizedPhone = normalizePhone(phone);
+        const normalizedUserId = normalizeUserId(userId);
      
        
         if(!validator.isEmail(normalizedEmail))
             return res.status(400).json({success:false,message:"Enter a valid email"})
+        if (!firstName?.trim() || !lastName?.trim()) {
+          return res.status(400).json({ success: false, message: "First and last name are required" });
+        }
+        if (!normalizedPhone || !normalizedUserId) {
+          return res.status(400).json({ success: false, message: "Phone and user ID are required" });
+        }
+        if (!isStrongPassword(password)) {
+          return res.status(400).json({
+            success: false,
+            message: "Password must be at least 8 characters and include uppercase, lowercase, and a number"
+          });
+        }
         const existingUser = await userModel.findOne({
-          $or: [{ email: normalizedEmail }, { userId }, { phone }]
+          $or: [{ email: normalizedEmail }, { userId: normalizedUserId }, { phone: normalizedPhone }]
         });
         if(existingUser)
             return res.status(400).json({success:false,message:"User already exists"})
 
         const pendingConflict = await PendingSignup.findOne({
           email: { $ne: normalizedEmail },
-          $or: [{ userId }, { phone }]
+          $or: [{ userId: normalizedUserId }, { phone: normalizedPhone }]
         });
 
         if (pendingConflict) {
@@ -99,10 +144,10 @@ const userRegister=async(req,res)=>{
           {
             firstName,
             lastName,
-            phone,
+            phone: normalizedPhone,
             email: normalizedEmail,
             password: hashedPassword,
-            userId,
+            userId: normalizedUserId,
             ...otpPayload
           },
           {
@@ -129,6 +174,12 @@ const userRegister=async(req,res)=>{
 const verifySignupOtp = async (req, res) => {
   try {
     const { email, otp } = req.body;
+    if (!email || !otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and OTP are required"
+      });
+    }
     const normalizedEmail = normalizeEmail(email);
 
     const pendingSignup = await PendingSignup.findOne({
@@ -207,11 +258,11 @@ const verifySignupOtp = async (req, res) => {
     await PendingSignup.deleteOne({ _id: pendingSignup._id });
 
     const token = await createToken(user._id);
+    setAuthCookie(res, token);
 
     return res.json({
       success: true,
-      message: "Email verified successfully",
-      token
+      message: "Email verified successfully"
     });
   } catch (error) {
     console.log(error);
@@ -224,6 +275,9 @@ const verifySignupOtp = async (req, res) => {
 
 const resendSignupOtp = async (req, res) => {
   try {
+    if (!req.body.email) {
+      return res.status(400).json({ success: false, message: "Email is required" });
+    }
     const normalizedEmail = normalizeEmail(req.body.email);
     const pendingSignup = await PendingSignup.findOne({ email: normalizedEmail });
 
@@ -264,6 +318,10 @@ const resendSignupOtp = async (req, res) => {
 
 const getCurrentUser = async (req, res) => {
     try {
+      if (!req.cookies?.csrf_token) {
+        setCsrfCookie(res);
+      }
+
       const user = await userModel
         .findById(req.user.id)
         .select("-password");
@@ -339,9 +397,17 @@ const updateCurrentUser = async (req, res) => {
   }
 };
 
+const logoutUser = async (_req, res) => {
+  clearAuthCookie(res);
+  return res.json({ success: true, message: "Logged out successfully" });
+};
+
   const forgotPassword = async (req, res) => {
     try {
       const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ success: false, message: "Email is required" });
+      }
   
       const user = await userModel.findOne({ email });
   
@@ -355,7 +421,7 @@ const updateCurrentUser = async (req, res) => {
   
       // Generate token (15 min expiry)
       const token = jwt.sign(
-        { id: user._id },
+        { id: user._id, tokenType: "password_reset" },
         process.env.JWT_SECRET_KEY,
         { expiresIn: "15m" }
       );
@@ -394,8 +460,20 @@ const updateCurrentUser = async (req, res) => {
   const resetPassword = async (req, res) => {
     try {
       const { token, newPassword } = req.body;
+      if (!token || !newPassword) {
+        return res.status(400).json({ success: false, message: "Token and new password are required" });
+      }
+      if (!isStrongPassword(newPassword)) {
+        return res.status(400).json({
+          success: false,
+          message: "Password must be at least 8 characters and include uppercase, lowercase, and a number"
+        });
+      }
   
       const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+      if (decoded.tokenType !== "password_reset") {
+        return res.status(400).json({ success: false, message: "Invalid or expired token" });
+      }
   
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(newPassword, salt);
@@ -453,6 +531,7 @@ export const handleResendWebhook = async (req, res) => {
     resendSignupOtp,
     getCurrentUser,
     updateCurrentUser,
+    logoutUser,
     forgotPassword,
     resetPassword
   };
