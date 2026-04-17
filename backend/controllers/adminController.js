@@ -8,6 +8,15 @@ const MIN_PASSWORD_LENGTH = 8;
 const normalizeEmail = (email = "") => email.trim().toLowerCase();
 const getConfiguredSuperAdminEmail = () =>
   normalizeEmail(process.env.SUPERADMIN_EMAIL || "");
+const isProduction = process.env.NODE_ENV === "production";
+
+const getSharedCookieDomain = () => {
+  if (!isProduction) {
+    return undefined;
+  }
+
+  return ".dealdine.in";
+};
 
 const resolveAdminRole = (admin) => {
   const normalizedEmail = normalizeEmail(admin?.email);
@@ -34,8 +43,10 @@ const createToken = (admin)=>{
 
 const getAuthCookieOptions = () => ({
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure: isProduction,
   sameSite: "lax",
+  domain: getSharedCookieDomain(),
+  path: "/",
   maxAge: 7 * 24 * 60 * 60 * 1000
 });
 

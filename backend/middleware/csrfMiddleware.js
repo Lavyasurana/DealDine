@@ -2,11 +2,22 @@ import crypto from "node:crypto";
 
 const CSRF_COOKIE_NAME = "csrf_token";
 const CSRF_HEADER_NAME = "x-csrf-token";
+const isProduction = process.env.NODE_ENV === "production";
+
+const getSharedCookieDomain = () => {
+  if (!isProduction) {
+    return undefined;
+  }
+
+  return ".dealdine.in";
+};
 
 const getCsrfCookieOptions = () => ({
   httpOnly: false,
-  secure: process.env.NODE_ENV === "production",
+  secure: isProduction,
   sameSite: "lax",
+  domain: getSharedCookieDomain(),
+  path: "/",
   maxAge: 24 * 60 * 60 * 1000,
 });
 

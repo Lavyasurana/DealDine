@@ -23,11 +23,22 @@ const MIN_PASSWORD_LENGTH = 8;
 const normalizeEmail = (email = "") => email.toLowerCase().trim();
 const normalizePhone = (phone = "") => String(phone).trim();
 const normalizeUserId = (userId = "") => String(userId).trim();
+const isProduction = process.env.NODE_ENV === "production";
+
+const getSharedCookieDomain = () => {
+  if (!isProduction) {
+    return undefined;
+  }
+
+  return ".dealdine.in";
+};
 
 const getAuthCookieOptions = () => ({
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
+  secure: isProduction,
   sameSite: "lax",
+  domain: getSharedCookieDomain(),
+  path: "/",
   maxAge: 24 * 60 * 60 * 1000
 });
 
