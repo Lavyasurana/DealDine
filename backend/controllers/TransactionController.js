@@ -97,41 +97,51 @@ const runInTransaction = async (work) => {
 };
 
 const reserveDealRedemption = async (deal, session, pendingCouponCount = 0) => {
-  const issuedCouponsCount = Math.max(
-    0,
-    (await UserCoupon.countDocuments({
-      deal: deal._id,
-    }).session(session)) - pendingCouponCount
-  );
+  const maxAttempts = 5;
 
-  const currentRedeemedCount = Math.max(
-    Number(deal.redeemedCount) || 0,
-    issuedCouponsCount
-  );
+  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+    const latestDeal = await dealModel.findById(deal._id).session(session);
 
-  if (currentRedeemedCount >= deal.maxRedemptions) {
-    throw new PurchaseError("This deal is no longer available");
-  }
-
-  const updatedDeal = await dealModel.findOneAndUpdate(
-    {
-      _id: deal._id,
-      redeemedCount: Number(deal.redeemedCount) || 0,
-    },
-    {
-      $set: { redeemedCount: currentRedeemedCount + 1 },
-    },
-    {
-      new: true,
-      session,
+    if (!latestDeal) {
+      throw new PurchaseError("Deal not found", 404);
     }
-  );
 
-  if (!updatedDeal) {
-    throw new PurchaseError("This deal is being purchased right now. Please try again.");
+    const issuedCouponsCount = Math.max(
+      0,
+      (await UserCoupon.countDocuments({
+        deal: latestDeal._id,
+      }).session(session)) - pendingCouponCount
+    );
+
+    const currentRedeemedCount = Math.max(
+      Number(latestDeal.redeemedCount) || 0,
+      issuedCouponsCount
+    );
+
+    if (currentRedeemedCount >= latestDeal.maxRedemptions) {
+      throw new PurchaseError("This deal is no longer available");
+    }
+
+    const updatedDeal = await dealModel.findOneAndUpdate(
+      {
+        _id: latestDeal._id,
+        redeemedCount: Number(latestDeal.redeemedCount) || 0,
+      },
+      {
+        $set: { redeemedCount: currentRedeemedCount + 1 },
+      },
+      {
+        new: true,
+        session,
+      }
+    );
+
+    if (updatedDeal) {
+      return updatedDeal;
+    }
   }
 
-  return updatedDeal;
+  throw new PurchaseError("This deal is being purchased right now. Please try again.");
 };
 
 const settleTransactionCredits = async (transaction, session) => {

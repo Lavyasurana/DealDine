@@ -44,9 +44,11 @@ export function CashfreeReturn() {
         } catch (error) {
           const errorMessage = error.response?.data?.message || "Payment could not be confirmed.";
           const isPending = errorMessage === "Payment is still pending";
+          const isTemporaryIssue =
+            errorMessage === "This deal is being purchased right now. Please try again.";
           const hasRetriesLeft = attempt < MAX_CONFIRM_RETRIES - 1;
 
-          if (isPending && hasRetriesLeft) {
+          if ((isPending || isTemporaryIssue) && hasRetriesLeft) {
             setMessage("Payment received. Waiting for confirmation from Cashfree...");
             await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
             continue;
