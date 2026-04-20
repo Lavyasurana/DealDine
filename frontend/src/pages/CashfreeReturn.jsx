@@ -49,7 +49,7 @@ export function CashfreeReturn() {
           const hasRetriesLeft = attempt < MAX_CONFIRM_RETRIES - 1;
 
           if (isPending && hasRetriesLeft) {
-            setMessage("Payment received. Waiting for confirmation from Cashfree...");
+            setMessage(" Waiting for confirmation from Cashfree...");
             await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
             continue;
           }

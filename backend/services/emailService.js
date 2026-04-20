@@ -4,6 +4,28 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendEmail = async (payload) => resend.emails.send(payload);
 
+const EMAIL_DATE_TIME_OPTIONS = {
+  day: "numeric",
+  month: "short",
+  year: "numeric",
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+  timeZone: "Asia/Kolkata",
+};
+
+const formatEmailDateTime = (value) => {
+  if (!value) {
+    return "N/A";
+  }
+
+  const parsed = new Date(value);
+
+  return Number.isNaN(parsed.getTime())
+    ? "N/A"
+    : parsed.toLocaleString("en-IN", EMAIL_DATE_TIME_OPTIONS);
+};
+
 // 🔥 Deal Email
 export const sendDealEmail = async (email, deal) => {
   try {
@@ -112,12 +134,12 @@ export const sendContactEmail = async ({ name, email, message }) => {
 
 export const sendCouponPurchaseEmail = async (email, coupon) => {
   try {
-    const validFrom = coupon.deal?.validFrom
-      ? new Date(coupon.deal.validFrom).toLocaleString("en-IN")
-      : "N/A";
-    const validTill = coupon.deal?.validTill
-      ? new Date(coupon.deal.validTill).toLocaleString("en-IN")
-      : "N/A";
+    const issuedAt = formatEmailDateTime(coupon.issuedAt);
+    const validFrom = formatEmailDateTime(coupon.deal?.validFrom);
+    const validTill = formatEmailDateTime(coupon.deal?.validTill);
+    const issuedAtDisplay = issuedAt === "N/A" ? issuedAt : `${issuedAt} IST`;
+    const validFromDisplay = validFrom === "N/A" ? validFrom : `${validFrom} IST`;
+    const validTillDisplay = validTill === "N/A" ? validTill : `${validTill} IST`;
 
     const html = `
       <h2>Your coupon is ready 🎉</h2>
@@ -126,8 +148,9 @@ export const sendCouponPurchaseEmail = async (email, coupon) => {
       <p><b>Restaurant:</b> ${coupon.deal?.resName || "N/A"}</p>
       <p><b>Deal:</b> ${coupon.deal?.dealName || "N/A"}</p>
       <p><b>Price:</b> ₹${coupon.deal?.price ?? "N/A"}</p>
-      <p><b>Valid From:</b> ${validFrom}</p>
-      <p><b>Valid Till:</b> ${validTill}</p>
+      <p><b>Issued At:</b> ${issuedAtDisplay}</p>
+      <p><b>Valid From:</b> ${validFromDisplay}</p>
+      <p><b>Valid Till:</b> ${validTillDisplay}</p>
       <p>You can also view this coupon in your DealDine account anytime.</p>
     `;
 
