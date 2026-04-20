@@ -1,7 +1,8 @@
 import React, { useState, useContext,useEffect } from "react";
-import { Flame } from "lucide-react";
+import { Flame, X } from "lucide-react";
 import DiscountCard from "../components/DiscountCard";
 import top from "../assets/top.png";
+import howToUsePoster from "../assets/how-to-use-dealdine-poster.png";
 import { rescueContext } from "../context/rescueContext";
 import { getToken } from "firebase/messaging";
 import { messaging } from "../firebase/firebase";
@@ -11,9 +12,28 @@ export default function Home() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const[showBanner,setShowBanner]=useState(false);
+  const [showPoster, setShowPoster] = useState(false);
   const dealsPerPage = 9;
 
 useEffect(() => {
+  if (userLogin) {
+    setShowPoster(false);
+    return undefined;
+  }
+
+  const posterTimer = setTimeout(() => {
+    setShowPoster(true);
+  }, 2000);
+
+  return () => clearTimeout(posterTimer);
+}, [userLogin]);
+
+useEffect(() => {
+  if (!userLogin) {
+    setShowBanner(false);
+    return undefined;
+  }
+
   const timer = setTimeout(() => {
     // Only show if not already accepted/denied
     if (Notification.permission === "default") {
@@ -112,6 +132,24 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-100 pt-20 px-4 sm:px-6 py-10 text-gray-900">
+      {!userLogin && showPoster && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-3 sm:p-6">
+          <button
+            type="button"
+            onClick={() => setShowPoster(false)}
+            aria-label="Close poster"
+            className="absolute right-4 top-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-gray-800 shadow-lg transition hover:bg-gray-100"
+          >
+            <X className="h-6 w-6" />
+          </button>
+
+          <img
+            src={howToUsePoster}
+            alt="How to use DealDine poster"
+            className="max-h-full max-w-full rounded-2xl object-contain shadow-2xl"
+          />
+        </div>
+      )}
       
       {/* Hero Section */}
       <div className="text-center max-w-3xl mx-auto">
