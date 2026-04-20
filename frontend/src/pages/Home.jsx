@@ -154,19 +154,15 @@ useEffect(() => {
 )}
 
       {/* Banner Section */}
-      <a
-        href="https://www.dealdine.in/getDeals/69e3b11b21ae48749f5a36b9"
-        className="block w-full max-w-5xl mx-auto mt-10 sm:mt-12"
+      
+      <div
+        style={{ backgroundImage: `url(${top})` }}
+        className="w-full max-w-5xl mx-auto h-28 sm:h-40 bg-cover bg-center rounded-2xl mt-10 sm:mt-12 flex items-center justify-center"
       >
-        <div
-          style={{ backgroundImage: `url(${top})` }}
-          className="h-28 sm:h-40 bg-cover bg-center rounded-2xl flex items-center justify-center transition hover:scale-[1.01]"
-        >
         <h1 className="font-bold text-2xl sm:text-5xl text-white drop-shadow-lg text-center px-2">
           BUY 1 GET 1 FREE
         </h1>
-        </div>
-      </a>
+      </div>
 
       {/* Live Deals */}
       <div className="mt-12 sm:mt-16">
