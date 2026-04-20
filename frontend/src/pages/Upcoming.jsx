@@ -12,6 +12,9 @@ export function Upcoming() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
+      const nextFiveDays = new Date(today);
+      nextFiveDays.setDate(nextFiveDays.getDate() + 5);
+
       const dealDate = parseBackendDateTime(deal.validFrom);
 
       if (!dealDate) {
@@ -20,19 +23,21 @@ export function Upcoming() {
 
       dealDate.setHours(0, 0, 0, 0);
 
-      return dealDate > today;
+      return dealDate > today && dealDate <= nextFiveDays;
     }) || [];
 
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-100 px-6 py-24">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50 to-green-100 px-4 py-24 sm:px-6">
 
       {/* Heading */}
-      <h2 className="text-3xl font-bold text-emerald-700 flex items-center gap-2">
-        <Ticket className="text-emerald-600" />
-        Deals Dropping Soon ⏳
-      </h2>
+      <div className="flex items-start gap-3 sm:items-center">
+        <Ticket className="mt-1 h-7 w-7 shrink-0 text-emerald-600 sm:mt-0 sm:h-8 sm:w-8" />
+        <h2 className="text-2xl font-bold leading-tight text-emerald-700 sm:text-3xl">
+          Deals Dropping Soon ⏳
+        </h2>
+      </div>
 
       {/* Subtext */}
       <p className="text-gray-600 mt-2">

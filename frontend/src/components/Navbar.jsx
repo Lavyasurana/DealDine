@@ -2,7 +2,7 @@ import React, { useContext, useState, useRef, useEffect } from "react";
 import { Menu, X, User } from "lucide-react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { rescueContext } from "../context/rescueContext";
-import logo from '../assets/logo.jpeg'
+import logo from '../assets/logo.png'
 import axios from "axios";
 
 export default function Navbar() {
