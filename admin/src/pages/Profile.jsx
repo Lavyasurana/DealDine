@@ -12,11 +12,14 @@ export function Profile() {
     const [location, setLocation] = useState('');
     const [town, setTown] = useState('');
     const [image, setImage] = useState(false);
+    const [saving, setSaving] = useState(false);
 
     const{backendUrl}=useContext(adminContext);
 
     const onSubmitHandler = async (e) => {
         e.preventDefault();
+        if (saving) return;
+        setSaving(true);
 
         try {
             const formData = new FormData();
@@ -31,9 +34,6 @@ export function Profile() {
                 backendUrl + "/api/admin/profile",
                 formData,
                 {
-                    headers: {
-                        "Content-Type": "multipart/form-data"
-                    },
                     withCredentials: true
                 }
             );
@@ -52,8 +52,11 @@ export function Profile() {
 
         } catch (error) {
             console.log(error);
-            toast.error("error in saving")
+            const errorMessage = error.response?.data?.message || "Error in saving";
+            toast.error(errorMessage)
            
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -115,8 +118,11 @@ export function Profile() {
                     </label>
                 </div>
 
-                <button className="bg-black text-white px-4 py-2 rounded w-32">
-                    Save
+                <button
+                    disabled={saving}
+                    className="bg-black text-white px-4 py-2 rounded w-32 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                    {saving ? "Saving..." : "Save"}
                 </button>
 
             </form>

@@ -220,6 +220,13 @@ export const adminProfile = async (req, res) => {
     const { restaurantName, location, town } = req.body;
     const userId = req.user.id;
 
+    if (!restaurantName?.trim() || !location?.trim() || !town?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Restaurant name, location, and town are required",
+      });
+    }
+
     let imageUrl = "";
 
     // multer uses memoryStorage, so uploaded files are available as buffers.
@@ -234,13 +241,20 @@ export const adminProfile = async (req, res) => {
     const updatedUser = await adminModel.findByIdAndUpdate(
       userId,
       {
-        restaurantName,
-        location,
-        town,
+        restaurantName: restaurantName.trim(),
+        location: location.trim(),
+        town: town.trim(),
         ...(imageUrl && { imageUrl }) // update image only if exists
       },
       { new: true } // returns updated doc
     );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "Admin not found",
+      });
+    }
 
     res.status(200).json({
       success: true,
@@ -252,7 +266,7 @@ export const adminProfile = async (req, res) => {
     console.log(error);
     res.status(500).json({
       success: false,
-      message: "Error updating profile"
+      message: error.message || "Error updating profile"
     });
   }
 };
