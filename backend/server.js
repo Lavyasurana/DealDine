@@ -6,6 +6,7 @@ import dealRouter from './routers/dealRouter.js';
 import userRouter from './routers/userRoute.js';
 import Couponrouter from './routers/userCouponRouter.js';
 import adminRouter from './routers/adminRouter.js';
+import superAdminRouter from './routers/superAdminRouter.js';
 import helmet from "helmet";
 import { connectCloudinary } from './config/cloudinary.js';
 import paymentRouter from './routers/paymentRouter.js';
@@ -70,6 +71,7 @@ app.use('/api/deals', dealRouter);
 app.use('/api/user', userRouter);
 app.use('/coupon', Couponrouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/superadmin', superAdminRouter);
 app.use('/api/payment', paymentRouter);
 
 // ✅ Health check (VERY IMPORTANT for UptimeRobot)
