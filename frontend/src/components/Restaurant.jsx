@@ -1,31 +1,30 @@
-import { Link } from "react-router-dom"
-
 export function Restaurant({admin}){
 
 return(
-   <div>
-    <div className="flex justify-between items-start gap-4">
+   <div className="h-full rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-100">
+    <div className="flex h-full flex-col gap-5">
+      <div className="flex items-start justify-between gap-4 min-h-[96px]">
 
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900">
+        <div className="min-w-0 flex-1">
+        <h3 className="text-lg font-semibold leading-snug text-gray-900">
           {admin.restaurantName}
         </h3>
-        <p className="text-sm">{admin.town}</p>
+        <p className="mt-2 text-sm text-gray-600">{admin.town}</p>
 
-      </div>
+        </div>
 
       
         <img
           src={admin.imageUrl}
           alt="restaurant"
-          className="w-16 h-16 object-cover rounded-lg"
+          className="h-16 w-16 flex-shrink-0 object-cover rounded-lg"
         />
+      </div>
       
-    </div>
-
-    <button className="mt-4 w-full bg-emerald-600 text-white py-2 rounded-xl hover:bg-emerald-700 transition">
+    <button className="mt-auto w-full bg-emerald-600 text-white py-2 rounded-xl hover:bg-emerald-700 transition">
       View All deals on search
     </button>
+    </div>
     </div>
 )
 }
