@@ -41,6 +41,23 @@ const normalizeDealDates = (dealData) => ({
   expiryDate: dealData.expiryDate ? parseDatetimeLocalAsIST(dealData.expiryDate) : dealData.expiryDate,
 });
 
+const getEmailErrorMessage = (error) => {
+  if (!error) {
+    return "Unknown email error";
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  return (
+    error.message ||
+    error.name ||
+    error.error?.message ||
+    error.response?.data?.message ||
+    "Unknown email error"
+  );
+};
 
 const addDeal = async (req, res) => {
   try {
@@ -129,16 +146,48 @@ await Promise.all(
 );
 
     // ✅ 3. Fetch users
-    const users = await userModel.find();
+    const users = await userModel.find({}, "email");
 
-    // ⚠️ 4. Send emails in background
-    Promise.all(users.map((user) => sendDealEmail(user.email, deal)))
-      .then(() => {})
-      .catch((err) => console.log("Email summary error:", err));
+    const emailRecipients = users
+      .map((user) => user.email?.trim().toLowerCase())
+      .filter(Boolean);
+
+    // ✅ 4. Send emails and wait for the actual results
+    const emailResults = await Promise.all(
+      emailRecipients.map((email) => sendDealEmail(email, deal))
+    );
+
+    const successfulEmails = emailResults
+      .filter((result) => result.success)
+      .map((result) => result.email);
+
+    const failedEmails = emailResults
+      .filter((result) => !result.success)
+      .map((result) => ({
+        email: result.email,
+        error: getEmailErrorMessage(result.error),
+      }));
+
+    console.log("Deal email summary:", {
+      dealId: deal._id.toString(),
+      totalRecipients: emailRecipients.length,
+      successCount: successfulEmails.length,
+      failureCount: failedEmails.length,
+      failedEmails,
+    });
 
     res.json({
       success: true,
-      message: "Deal Added & Users Notified"
+      message:
+        failedEmails.length > 0
+          ? "Deal added. Some user emails could not be sent."
+          : "Deal Added & Users Notified",
+      emailSummary: {
+        totalRecipients: emailRecipients.length,
+        successCount: successfulEmails.length,
+        failureCount: failedEmails.length,
+        failedEmails,
+      }
     });
 
   } catch (error) {
