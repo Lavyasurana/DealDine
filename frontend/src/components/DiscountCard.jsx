@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
+import { formatDealDateList, formatDealTimeRange } from "../utils/dateTime";
 
 export default function DiscountCard({
+  deal,
   name,
   offer,
   validFrom,
@@ -9,6 +11,11 @@ export default function DiscountCard({
   price,
   dealId
 }) {
+  const resolvedDeal = deal || {
+    validFrom,
+    validTill,
+  };
+
   return (
     <Link to={`/getDeals/${dealId}`} className="block">
     <div className="bg-white rounded-2xl shadow-md overflow-hidden hover:shadow-xl hover:scale-[1.02] transition cursor-pointer">
@@ -47,12 +54,12 @@ export default function DiscountCard({
         {/* 🕒 DATE + TIME */}
         <div className="text-xs text-gray-500 space-y-1">
           <p>
-            From:{" "}
-            {new Date(validFrom).toLocaleString()}
+            Time:{" "}
+            {formatDealTimeRange(resolvedDeal)}
           </p>
           <p>
-            Till:{" "}
-            {new Date(validTill).toLocaleString()}
+            Dates:{" "}
+            {formatDealDateList(resolvedDeal, 2)}
           </p>
         </div>
 

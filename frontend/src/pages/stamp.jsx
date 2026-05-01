@@ -2,7 +2,12 @@ import { useEffect, useState, useContext } from "react";
 import { useParams } from "react-router-dom";
 import axios from "axios";
 import { rescueContext } from "../context/rescueContext";
-import { formatDateTime, parseBackendDateTime } from "../utils/dateTime";
+import {
+  formatDateTime,
+  formatDealDateList,
+  formatDealTimeRange,
+  parseBackendDateTime,
+} from "../utils/dateTime";
 
 export function CouponPage() {
   const { couponId } = useParams();
@@ -144,15 +149,24 @@ export function CouponPage() {
           <div className="mt-4 bg-gray-100 p-4 rounded-xl">
             <p className="text-sm text-gray-500">Validity</p>
 
-            {coupon.deal.validFrom && coupon.deal.validTill ? (
-              <p className="text-md font-semibold text-gray-700">
-                {formatDateTime(coupon.deal.validFrom)}
-                {" → "} 
-                {formatDateTime(coupon.deal.validTill)}
-              </p>
+            {coupon.deal ? (
+              <>
+                <p className="text-md font-semibold text-gray-700">
+                  Dates: {formatDealDateList(coupon.deal)}
+                </p>
+                <p className="text-md font-semibold text-gray-700">
+                  Time: {formatDealTimeRange(coupon.deal)}
+                </p>
+              </>
             ) : expiry ? (
               <p className="text-md font-semibold text-gray-700">
                 Expires on {formatDateTime(expiry)}
+              </p>
+            ) : null}
+
+            {expiry ? (
+              <p className="text-md font-semibold text-gray-700">
+                Last valid slot ends on {formatDateTime(expiry)}
               </p>
             ) : (
               <p className="text-md text-gray-500">No expiry info</p>

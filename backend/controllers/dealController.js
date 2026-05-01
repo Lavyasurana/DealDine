@@ -7,6 +7,13 @@ import { sendDealEmail } from "../services/emailService.js"
 import adminModel from "../models/adminModel.js";
 import NotiTokenModel from "../models/NotiToken.js";
 import admin from "../config/firebase.js";
+import {
+  buildDealAvailabilityWindow,
+  compareTimeStrings,
+  normalizeAvailableDates,
+  toDateInputValue,
+  toTimeInputValue,
+} from "../utils/dealSchedule.js";
 
 const parseDatetimeLocalAsIST = (value) => {
   if (!value || typeof value !== "string") {
@@ -41,6 +48,44 @@ const normalizeDealDates = (dealData) => ({
   expiryDate: dealData.expiryDate ? parseDatetimeLocalAsIST(dealData.expiryDate) : dealData.expiryDate,
 });
 
+const normalizeDealSchedule = (dealData) => {
+  const normalizedDates = normalizeAvailableDates(dealData.availableDates);
+
+  const startTime =
+    typeof dealData.startTime === "string" && dealData.startTime.trim()
+      ? dealData.startTime.trim()
+      : dealData.validFrom
+        ? toTimeInputValue(parseDatetimeLocalAsIST(dealData.validFrom))
+        : "";
+
+  const endTime =
+    typeof dealData.endTime === "string" && dealData.endTime.trim()
+      ? dealData.endTime.trim()
+      : dealData.validTill
+        ? toTimeInputValue(parseDatetimeLocalAsIST(dealData.validTill))
+        : "";
+
+  const fallbackDates = [];
+
+  if (!normalizedDates.length && dealData.validFrom) {
+    fallbackDates.push(parseDatetimeLocalAsIST(dealData.validFrom));
+  }
+
+  if (!normalizedDates.length && dealData.validTill) {
+    fallbackDates.push(parseDatetimeLocalAsIST(dealData.validTill));
+  }
+
+  const availableDates = normalizedDates.length
+    ? normalizedDates
+    : normalizeAvailableDates(fallbackDates.map((value) => toDateInputValue(value)));
+
+  return {
+    startTime,
+    endTime,
+    availableDates,
+  };
+};
+
 const getEmailErrorMessage = (error) => {
   if (!error) {
     return "Unknown email error";
@@ -64,6 +109,7 @@ const addDeal = async (req, res) => {
     const adminId = req.user.id;
     const { maxRedemptions, ...dealData } = req.body;
     const normalizedDealData = normalizeDealDates(dealData);
+    const normalizedSchedule = normalizeDealSchedule(dealData);
 
     // ✅ 1. Fetch admin details
     const Admin = await adminModel.findById(adminId);
@@ -90,6 +136,29 @@ const addDeal = async (req, res) => {
       });
     }
 
+    if (!normalizedSchedule.startTime || !normalizedSchedule.endTime) {
+      return res.json({
+        success: false,
+        message: "Start time and end time are required"
+      });
+    }
+
+    if (compareTimeStrings(normalizedSchedule.startTime, normalizedSchedule.endTime) >= 0) {
+      return res.json({
+        success: false,
+        message: "End time must be after start time"
+      });
+    }
+
+    if (!normalizedSchedule.availableDates.length) {
+      return res.json({
+        success: false,
+        message: "Select at least one date for this deal"
+      });
+    }
+
+    const availabilityWindow = buildDealAvailabilityWindow(normalizedSchedule);
+
     // ✅ 2. Create deal with admin data
     const deal = new dealModel({
       ...normalizedDealData,
@@ -97,6 +166,12 @@ const addDeal = async (req, res) => {
       ...(parsedMaxRedemptions !== undefined
         ? { maxRedemptions: parsedMaxRedemptions }
         : {}),
+      startTime: normalizedSchedule.startTime,
+      endTime: normalizedSchedule.endTime,
+      availableDates: availabilityWindow.availableDates,
+      validFrom: availabilityWindow.validFrom,
+      validTill: availabilityWindow.validTill,
+      expiryDate: availabilityWindow.expiryDate,
 
       // inject from admin
       resName: Admin.restaurantName,

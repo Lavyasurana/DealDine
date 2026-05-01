@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from "react"
 import axios from "axios"
 import { adminContext } from "../context/adminContext"
-import { formatDateTime } from "../utils/dateTime"
+import { formatDealDateList, formatDealTimeRange } from "../utils/dateTime"
 
 const ListCoupons = () => {
 
@@ -60,19 +60,19 @@ const ListCoupons = () => {
 
             <div className="text-right">
               <p className="text-sm text-gray-500">
-                Valid From
+                Time
               </p>
 
               <p className="mb-2">
-                {formatDateTime(deal.validFrom)}
+                {formatDealTimeRange(deal)}
               </p>
 
               <p className="text-sm text-gray-500">
-                Valid Till
+                Dates
               </p>
 
               <p>
-                {formatDateTime(deal.validTill)}
+                {formatDealDateList(deal)}
               </p>
             </div>
 

@@ -4,7 +4,7 @@ import { useEffect, useContext, useState } from "react";
 import { rescueContext } from "../context/rescueContext";
 import DiscountCard from "../components/DiscountCard";
 import { toast } from "react-toastify";
-import { formatDateTime } from "../utils/dateTime";
+import { formatDealDateList, formatDealTimeRange, formatDateTime } from "../utils/dateTime";
 
 
 export function DealModal() {
@@ -61,13 +61,20 @@ export function DealModal() {
 
             <div className="flex items-center gap-2 text-gray-600">
               <Clock className="w-4 h-4" />
-              <p>Valid From: {formatDateTime(deal.validFrom)}</p>
+              <p>Dates: {formatDealDateList(deal)}</p>
             </div>
 
             <div className="flex items-center gap-2 text-gray-600">
               <Clock className="w-4 h-4" />
-              <p>Valid Till: {formatDateTime(deal.validTill)}</p>
+              <p>Time: {formatDealTimeRange(deal)}</p>
             </div>
+
+            {deal.validTill ? (
+              <div className="flex items-center gap-2 text-gray-600">
+                <Clock className="w-4 h-4" />
+                <p>Last slot ends: {formatDateTime(deal.validTill)}</p>
+              </div>
+            ) : null}
 
             <p className="text-sm text-gray-500">{deal.location}</p>
 
@@ -123,6 +130,7 @@ export function DealModal() {
               {upcomingDeals.map((d) => (
                 <DiscountCard
                   key={d._id}
+                  deal={d}
                   name={d.resName}
                   offer={d.dealName}
                   validFrom={d.validFrom}

@@ -145,19 +145,18 @@ const RedeemCoupon = () => {
                 <th className="px-4 py-3 text-left">Deal</th>
                 <th className="px-4 py-3 text-left">Redeemed At</th>
                 <th className="px-4 py-3 text-left">Bill Amount</th>
-                <th className="px-4 py-3 text-left">Action</th>
               </tr>
             </thead>
             <tbody>
               {loadingCoupons ? (
                 <tr>
-                  <td colSpan="6" className="px-4 py-6 text-center text-gray-500">
+                  <td colSpan="5" className="px-4 py-6 text-center text-gray-500">
                     Loading redeemed coupons...
                   </td>
                 </tr>
               ) : redeemedCoupons.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-4 py-6 text-center text-gray-500">
+                  <td colSpan="5" className="px-4 py-6 text-center text-gray-500">
                     No pending bill entries.
                   </td>
                 </tr>
@@ -177,24 +176,24 @@ const RedeemCoupon = () => {
                     </td>
                     <td className="px-4 py-3">{formatDateTime(coupon.usedAt)}</td>
                     <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={coupon.billAmountInput}
-                        onChange={(e) => billInputChangeHandler(coupon._id, e.target.value)}
-                        placeholder="Enter bill amount"
-                        className="border p-2 rounded w-40"
-                      />
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => saveBillHandler(coupon)}
-                        disabled={savingCouponId === coupon._id}
-                        className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800 disabled:bg-gray-400"
-                      >
-                        {savingCouponId === coupon._id ? "Saving..." : "Save Bill"}
-                      </button>
+                      <div className="flex min-w-[220px] items-center gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={coupon.billAmountInput}
+                          onChange={(e) => billInputChangeHandler(coupon._id, e.target.value)}
+                          placeholder="Enter bill amount"
+                          className="border p-2 rounded flex-1"
+                        />
+                        <button
+                          onClick={() => saveBillHandler(coupon)}
+                          disabled={savingCouponId === coupon._id}
+                          className="shrink-0 bg-black text-white px-4 py-2 rounded hover:bg-gray-800 disabled:bg-gray-400"
+                        >
+                          {savingCouponId === coupon._id ? "Saving..." : "Save"}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

@@ -2,6 +2,7 @@ import UserCoupon from "../models/userCouponModel.js";
 import dealModel from "../models/dealModel.js";
 import Bill from "../models/billModel.js";
 import { sendCouponPurchaseEmail } from "../services/emailService.js";
+import { isDealLiveAt } from "../utils/dealSchedule.js";
 
 const hasReachedClaimLimit = async (dealId, maxRedemptions) => {
   const totalClaims = await UserCoupon.countDocuments({ deal: dealId });
@@ -19,6 +20,13 @@ export const createCoupon = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Deal not found"
+      });
+    }
+
+    if (deal.validTill && new Date() > new Date(deal.validTill)) {
+      return res.status(400).json({
+        success: false,
+        message: "This deal is no longer available"
       });
     }
 
@@ -180,11 +188,18 @@ export const redeemCoupon = async (req, res) => {
   
       const now = new Date();
   
-      // ❗ Check if deal time has passed
+      // The coupon can only be redeemed during one of the scheduled deal slots.
       if (now > deal.validTill) {
         return res.status(400).json({
           success: false,
           message: "Coupon expired"
+        });
+      }
+
+      if (!isDealLiveAt(deal, now)) {
+        return res.status(400).json({
+          success: false,
+          message: "This coupon can only be redeemed during the deal's scheduled time"
         });
       }
   

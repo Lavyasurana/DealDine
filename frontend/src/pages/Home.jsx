@@ -213,6 +213,7 @@ useEffect(() => {
           {currentDeals.map((deal) => (
             <DiscountCard
               key={deal._id}
+              deal={deal}
               name={deal.resName}
               offer={deal.dealName}
               validTime={deal.validTime}

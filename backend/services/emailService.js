@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { formatTimeRangeLabel } from "../utils/dealSchedule.js";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -24,6 +25,23 @@ const formatEmailDateTime = (value) => {
   return Number.isNaN(parsed.getTime())
     ? "N/A"
     : parsed.toLocaleString("en-IN", EMAIL_DATE_TIME_OPTIONS);
+};
+
+const formatEmailDate = (value) => {
+  if (!value) {
+    return "N/A";
+  }
+
+  const parsed = new Date(value);
+
+  return Number.isNaN(parsed.getTime())
+    ? "N/A"
+    : parsed.toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        timeZone: "Asia/Kolkata",
+      });
 };
 
 // 🔥 Deal Email
@@ -137,6 +155,10 @@ export const sendCouponPurchaseEmail = async (email, coupon) => {
     const issuedAt = formatEmailDateTime(coupon.issuedAt);
     const validFrom = formatEmailDateTime(coupon.deal?.validFrom);
     const validTill = formatEmailDateTime(coupon.deal?.validTill);
+    const dealDates = Array.isArray(coupon.deal?.availableDates)
+      ? coupon.deal.availableDates.map((value) => formatEmailDate(value)).join(", ")
+      : "N/A";
+    const timeRange = formatTimeRangeLabel(coupon.deal?.startTime, coupon.deal?.endTime) || "N/A";
     const issuedAtDisplay = issuedAt === "N/A" ? issuedAt : `${issuedAt} IST`;
     const validFromDisplay = validFrom === "N/A" ? validFrom : `${validFrom} IST`;
     const validTillDisplay = validTill === "N/A" ? validTill : `${validTill} IST`;
@@ -149,6 +171,8 @@ export const sendCouponPurchaseEmail = async (email, coupon) => {
       <p><b>Deal:</b> ${coupon.deal?.dealName || "N/A"}</p>
       <p><b>Price:</b> ₹${coupon.deal?.price ?? "N/A"}</p>
       <p><b>Issued At:</b> ${issuedAtDisplay}</p>
+      <p><b>Available Dates:</b> ${dealDates}</p>
+      <p><b>Time:</b> ${timeRange}</p>
       <p><b>Valid From:</b> ${validFromDisplay}</p>
       <p><b>Valid Till:</b> ${validTillDisplay}</p>
       <p>You can also view this coupon in your DealDine account anytime.</p>

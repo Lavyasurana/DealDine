@@ -8,14 +8,16 @@ const AddCoupon = () => {
 
   const{backendUrl}=useContext(adminContext);
   const [loading, setLoading] = useState(false);
+  const [selectedDate, setSelectedDate] = useState("");
   const [data,setData] = useState({
     
     dealName:"",
     description:"",
     price:"",
     maxRedemptions:"",
-    validFrom:"",
-    validTill:"",
+    startTime:"",
+    endTime:"",
+    availableDates:[],
     
   })
 
@@ -23,9 +25,45 @@ const AddCoupon = () => {
     setData({...data,[e.target.name]:e.target.value})
   }
 
+  const addAvailableDate = () => {
+    if (!selectedDate) {
+      toast.error("Select a date first");
+      return;
+    }
+
+    if (data.availableDates.includes(selectedDate)) {
+      toast.error("That date is already selected");
+      return;
+    }
+
+    setData((prev) => ({
+      ...prev,
+      availableDates: [...prev.availableDates, selectedDate].sort(),
+    }));
+    setSelectedDate("");
+  };
+
+  const removeAvailableDate = (dateToRemove) => {
+    setData((prev) => ({
+      ...prev,
+      availableDates: prev.availableDates.filter((date) => date !== dateToRemove),
+    }));
+  };
+
   const submitHandler = async(e)=>{
     e.preventDefault()
     if (loading) return;
+
+    if (!data.startTime || !data.endTime) {
+      toast.error("Select both start and end time");
+      return;
+    }
+
+    if (data.availableDates.length === 0) {
+      toast.error("Select at least one available date");
+      return;
+    }
+
     setLoading(true); 
 
     try{
@@ -51,10 +89,12 @@ const AddCoupon = () => {
           description:"",
           price:"",
           maxRedemptions:"",
-          validFrom:"",
-          validTill:"",
+          startTime:"",
+          endTime:"",
+          availableDates:[],
           
         })
+        setSelectedDate("");
       }
       else{
         toast.error(res.data.message)
@@ -116,25 +156,65 @@ const AddCoupon = () => {
 
        
 
-        <label>Valid From</label>
+        <label>Start Time</label>
         <input
-          type="datetime-local"
-          name="validFrom"
-          value={data.validFrom}
+          type="time"
+          name="startTime"
+          value={data.startTime}
           onChange={handleChange}
           className="border p-2 rounded"
+          required
         />
 
-        <label>Valid Till</label>
+        <label>End Time</label>
         <input
-          type="datetime-local"
-          name="validTill"
-          value={data.validTill}
+          type="time"
+          name="endTime"
+          value={data.endTime}
           onChange={handleChange}
           className="border p-2 rounded"
+          required
         />
 
-        
+        <div className="flex flex-col gap-3 rounded border p-4">
+          <label className="font-medium">Available Dates</label>
+
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="border p-2 rounded flex-1"
+            />
+
+            <button
+              type="button"
+              onClick={addAvailableDate}
+              className="bg-emerald-500 px-4 py-2 rounded text-white hover:bg-emerald-600"
+            >
+              Add Date
+            </button>
+          </div>
+
+          {data.availableDates.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {data.availableDates.map((date) => (
+                <button
+                  key={date}
+                  type="button"
+                  onClick={() => removeAvailableDate(date)}
+                  className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-sm text-emerald-700"
+                >
+                  {date} ×
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">
+              No dates selected yet
+            </p>
+          )}
+        </div>
 
         <button
           type="submit"

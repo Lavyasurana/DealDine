@@ -4,7 +4,7 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { Clock } from "lucide-react";
 import { rescueContext } from "../context/rescueContext";
-import { formatDate, formatTime } from "../utils/dateTime";
+import { formatDealDateList, formatDealTimeRange, formatDateTime } from "../utils/dateTime";
 
 const CASHFREE_APPROVED_ORIGIN = "https://www.dealdine.in";
 
@@ -166,12 +166,18 @@ export function Checkout() {
             <p className="text-gray-600">{deal.location}</p>
             <div className="flex items-center gap-2 text-gray-500">
               <Clock className="w-4 h-4" />
-              <p>Valid from: {formatDate(deal.validFrom)} | {formatTime(deal.validFrom)}</p>
+              <p>Dates: {formatDealDateList(deal)}</p>
             </div>
             <div className="flex items-center gap-2 text-gray-500">
               <Clock className="w-4 h-4" />
-              <p>Valid till: {formatDate(deal.validTill)} | {formatTime(deal.validTill)}</p>
+              <p>Time: {formatDealTimeRange(deal)}</p>
             </div>
+            {deal.validTill ? (
+              <div className="flex items-center gap-2 text-gray-500">
+                <Clock className="w-4 h-4" />
+                <p>Last valid slot ends: {formatDateTime(deal.validTill)}</p>
+              </div>
+            ) : null}
           </div>
         </div>
 

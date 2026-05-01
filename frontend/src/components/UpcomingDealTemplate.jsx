@@ -1,6 +1,12 @@
 import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { formatDateTime, parseBackendDateTime } from "../utils/dateTime";
+import {
+  formatDateTime,
+  formatDealDateList,
+  formatDealTimeRange,
+  getNextDealOccurrence,
+  isDealLiveNow,
+} from "../utils/dateTime";
 
 export function UpcomingDealTemplate({ deal }) {
   const [timeLeft, setTimeLeft] = useState("");
@@ -8,17 +14,23 @@ export function UpcomingDealTemplate({ deal }) {
   useEffect(() => {
     const calculateTimeLeft = () => {
         const now = new Date();
-        const start = parseBackendDateTime(deal.validFrom);
+        const nextOccurrence = getNextDealOccurrence(deal, now);
+        const start = nextOccurrence?.start || null;
 
         if (!start) {
           setTimeLeft("");
           return;
         }
       
+        if (isDealLiveNow(deal, now)) {
+          setTimeLeft("Live now");
+          return;
+        }
+
         const diff = start - now;
       
         if (diff <= 0) {
-          setTimeLeft("Live now 🔥");
+          setTimeLeft("Live now");
           return;
         }
       
@@ -40,7 +52,9 @@ export function UpcomingDealTemplate({ deal }) {
     const timer = setInterval(calculateTimeLeft, 60000); // update every minute
 
     return () => clearInterval(timer);
-  }, [deal.validFrom]);
+  }, [deal]);
+
+  const nextOccurrence = getNextDealOccurrence(deal);
 
   return (
     <Link to={`/getDeals/${deal._id}`}>
@@ -59,8 +73,16 @@ export function UpcomingDealTemplate({ deal }) {
             </p>
 
             <p className="text-xs text-gray-500 mt-2">
-              Starts on:{" "}
-              {formatDateTime(deal.validFrom)}
+              Dates: {formatDealDateList(deal, 3)}
+            </p>
+
+            <p className="text-xs text-gray-500 mt-1">
+              Time: {formatDealTimeRange(deal)}
+            </p>
+
+            <p className="text-xs text-gray-500 mt-1">
+              Next slot:{" "}
+              {nextOccurrence ? formatDateTime(nextOccurrence.start) : "Not scheduled"}
             </p>
 
             {/* 🔥 Countdown */}

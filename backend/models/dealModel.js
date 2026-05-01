@@ -44,6 +44,19 @@ const dealSchema = new mongoose.Schema({
     type: Date
   },
 
+  startTime: {
+    type: String
+  },
+
+  endTime: {
+    type: String
+  },
+
+  availableDates: {
+    type: [Date],
+    default: []
+  },
+
   expiryDate: {
     type: Date
   },

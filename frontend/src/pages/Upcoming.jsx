@@ -1,8 +1,8 @@
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
 import { rescueContext } from "../context/rescueContext";
 import { Ticket } from "lucide-react";
 import { UpcomingDealTemplate } from "../components/UpcomingDealTemplate";
-import { parseBackendDateTime } from "../utils/dateTime";
+import { getNextDealOccurrence } from "../utils/dateTime";
 
 export function Upcoming() {
   const { liveDeals } = useContext(rescueContext);
@@ -15,12 +15,13 @@ export function Upcoming() {
       const nextFiveDays = new Date(today);
       nextFiveDays.setDate(nextFiveDays.getDate() + 5);
 
-      const dealDate = parseBackendDateTime(deal.validFrom);
+      const nextOccurrence = getNextDealOccurrence(deal);
 
-      if (!dealDate) {
+      if (!nextOccurrence) {
         return false;
       }
 
+      const dealDate = new Date(nextOccurrence.start);
       dealDate.setHours(0, 0, 0, 0);
 
       return dealDate > today && dealDate <= nextFiveDays;

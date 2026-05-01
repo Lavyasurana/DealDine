@@ -1,6 +1,11 @@
 import { useContext } from "react";
 import { rescueContext } from "../context/rescueContext";
-import { formatDateTime, parseBackendDateTime } from "../utils/dateTime";
+import {
+  formatDateTime,
+  formatDealDateList,
+  formatDealTimeRange,
+  parseBackendDateTime,
+} from "../utils/dateTime";
 
 export function IssuedCouponCard({ coupon }) {
   const { navigate } = useContext(rescueContext);
@@ -48,13 +53,21 @@ export function IssuedCouponCard({ coupon }) {
       </p>
 
       {/* ✅ VALIDITY */}
-      {deal?.validFrom && deal?.validTill ? (
+      {deal ? (
         <p className="text-gray-500 text-sm mt-1">
-          Valid: {formatDateTime(deal.validFrom)} {" - "} {formatDateTime(deal.validTill)}
+          Dates: {formatDealDateList(deal)}
         </p>
-      ) : deal?.validTill ? (
+      ) : null}
+
+      {deal ? (
         <p className="text-gray-500 text-sm mt-1">
-          Valid till: {formatDateTime(deal.validTill)}
+          Time: {formatDealTimeRange(deal)}
+        </p>
+      ) : null}
+
+      {deal?.validTill ? (
+        <p className="text-gray-500 text-sm mt-1">
+          Last valid slot: {formatDateTime(deal.validTill)}
         </p>
       ) : null}
 

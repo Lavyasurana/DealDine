@@ -48,6 +48,10 @@ const validateDealPurchase = async (userId, dealId) => {
     return { error: "Invalid user or deal" };
   }
 
+  if (deal.validTill && new Date() > new Date(deal.validTill)) {
+    return { error: "This deal is no longer available" };
+  }
+
   if (await hasReachedClaimLimit(dealId, deal.maxRedemptions)) {
     return { error: "This deal is no longer available" };
   }
