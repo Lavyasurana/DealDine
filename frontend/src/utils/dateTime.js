@@ -29,7 +29,10 @@ const DATE_INPUT_FORMATTER = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Kolkata",
 });
 
-const TIME_FORMATTER = new Intl.DateTimeFormat("en-IN", TIME_OPTIONS);
+const TIME_VALUE_FORMATTER = new Intl.DateTimeFormat("en-IN", {
+  ...TIME_OPTIONS,
+  timeZone: "UTC",
+});
 
 export const parseBackendDateTime = (value) => {
   if (!value) return null;
@@ -69,7 +72,7 @@ export const formatTimeValue = (value) => {
   const [hour, minute] = value.split(":").map(Number);
   const date = new Date(Date.UTC(2000, 0, 1, hour, minute));
 
-  return TIME_FORMATTER.format(date);
+  return TIME_VALUE_FORMATTER.format(date);
 };
 
 export const formatDealTimeRange = (deal) => {

@@ -104,6 +104,66 @@ const getEmailErrorMessage = (error) => {
   );
 };
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const isRetryableEmailError = (error) => {
+  const message = getEmailErrorMessage(error).toLowerCase();
+
+  return (
+    message.includes("rate") ||
+    message.includes("too many") ||
+    message.includes("timeout") ||
+    message.includes("timed out") ||
+    message.includes("429") ||
+    message.includes("socket") ||
+    message.includes("network") ||
+    message.includes("econnreset") ||
+    message.includes("etimedout")
+  );
+};
+
+const sendDealEmailWithRetry = async (email, deal, maxAttempts = 3) => {
+  let lastResult = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const result = await sendDealEmail(email, deal);
+
+    if (result.success) {
+      return result;
+    }
+
+    lastResult = result;
+
+    if (attempt < maxAttempts && isRetryableEmailError(result.error)) {
+      await wait(500 * attempt);
+      continue;
+    }
+
+    return result;
+  }
+
+  return lastResult || { success: false, email, error: "Unknown email error" };
+};
+
+const sendDealEmailsInBatches = async (emails, deal, batchSize = 20) => {
+  const results = [];
+
+  for (let index = 0; index < emails.length; index += batchSize) {
+    const batch = emails.slice(index, index + batchSize);
+    const batchResults = await Promise.all(
+      batch.map((email) => sendDealEmailWithRetry(email, deal))
+    );
+
+    results.push(...batchResults);
+
+    if (index + batchSize < emails.length) {
+      await wait(300);
+    }
+  }
+
+  return results;
+};
+
 const addDeal = async (req, res) => {
   try {
     const adminId = req.user.id;
@@ -223,14 +283,16 @@ await Promise.all(
     // ✅ 3. Fetch users
     const users = await userModel.find({}, "email");
 
-    const emailRecipients = users
-      .map((user) => user.email?.trim().toLowerCase())
-      .filter(Boolean);
-
-    // ✅ 4. Send emails and wait for the actual results
-    const emailResults = await Promise.all(
-      emailRecipients.map((email) => sendDealEmail(email, deal))
+    const emailRecipients = Array.from(
+      new Set(
+        users
+          .map((user) => user.email?.trim().toLowerCase())
+          .filter(Boolean)
+      )
     );
+
+    // ✅ 4. Send emails in controlled batches to avoid provider throttling
+    const emailResults = await sendDealEmailsInBatches(emailRecipients, deal);
 
     const successfulEmails = emailResults
       .filter((result) => result.success)
