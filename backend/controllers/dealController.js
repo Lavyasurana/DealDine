@@ -1,8 +1,7 @@
 import dealModel from "../models/dealModel.js"
 import userModel from "../models/userModel.js"
 
-
-import { sendDealEmail } from "../services/emailService.js"
+import { sendDealEmail, sendDealEmailsBatch } from "../services/emailService.js"
 
 import adminModel from "../models/adminModel.js";
 import NotiTokenModel from "../models/NotiToken.js";
@@ -145,16 +144,28 @@ const sendDealEmailWithRetry = async (email, deal, maxAttempts = 3) => {
   return lastResult || { success: false, email, error: "Unknown email error" };
 };
 
-const sendDealEmailsInBatches = async (emails, deal, batchSize = 20) => {
+const sendDealEmailsInBatches = async (emails, deal, batchSize = 100) => {
   const results = [];
 
   for (let index = 0; index < emails.length; index += batchSize) {
     const batch = emails.slice(index, index + batchSize);
-    const batchResults = await Promise.all(
-      batch.map((email) => sendDealEmailWithRetry(email, deal))
+    const batchResults = await sendDealEmailsBatch(batch, deal);
+
+    const normalizedBatchResults = await Promise.all(
+      batchResults.map(async (result) => {
+        if (result.success) {
+          return result;
+        }
+
+        if (isRetryableEmailError(result.error)) {
+          return sendDealEmailWithRetry(result.email, deal);
+        }
+
+        return result;
+      })
     );
 
-    results.push(...batchResults);
+    results.push(...normalizedBatchResults);
 
     if (index + batchSize < emails.length) {
       await wait(300);

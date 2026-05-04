@@ -44,14 +44,10 @@ const formatEmailDate = (value) => {
       });
 };
 
-// 🔥 Deal Email
-export const sendDealEmail = async (email, deal) => {
-  try {
-    const html = `
+const buildDealEmailHtml = (deal) => `
   <div style="font-family: Arial, sans-serif; background:#ecfdf5; padding:20px;">
-    
     <h1 style="color:#059669;">🔥 Deal Alert!</h1>
-    
+
     <h2 style="margin-bottom:5px; color:#065f46;">
       ${deal.dealName}
     </h2>
@@ -59,8 +55,8 @@ export const sendDealEmail = async (email, deal) => {
       at <b>${deal.resName}</b>
     </p>
 
-    <img 
-      src="${deal.image || 'https://via.placeholder.com/400'}" 
+    <img
+      src="${deal.image || "https://via.placeholder.com/400"}"
       style="width:100%; max-width:400px; border-radius:12px; margin:15px 0;"
     />
 
@@ -100,10 +96,13 @@ export const sendDealEmail = async (email, deal) => {
     <p style="margin-top:30px; font-size:12px; color:#065f46;">
       Hurry before it's gone! Deals like this don’t last long 😋
     </p>
-
   </div>
+`;
 
-  `;
+// 🔥 Deal Email
+export const sendDealEmail = async (email, deal) => {
+  try {
+    const html = buildDealEmailHtml(deal);
 
   const response = await sendEmail({
     from: "DealDine <noreply@dealdine.in>",
@@ -115,6 +114,35 @@ export const sendDealEmail = async (email, deal) => {
     return { success: true, email, response };
   } catch (error) {
     return { success: false, email, error };
+  }
+};
+
+export const sendDealEmailsBatch = async (emails, deal) => {
+  try {
+    const html = buildDealEmailHtml(deal);
+    const payloads = emails.map((email) => ({
+      from: "DealDine <noreply@dealdine.in>",
+      reply_to: "dealdine24@gmail.com",
+      to: [email],
+      subject: `🔥 ${deal.dealName} @ ₹${deal.price} – Don’t Miss Out!`,
+      html,
+    }));
+
+    const response = await resend.batch.send(payloads);
+    const responseData = Array.isArray(response?.data) ? response.data : [];
+
+    return emails.map((email, index) => ({
+      success: Boolean(responseData[index]?.id),
+      email,
+      response: responseData[index] || null,
+      error: responseData[index]?.id ? null : response?.error || "Batch email send failed",
+    }));
+  } catch (error) {
+    return emails.map((email) => ({
+      success: false,
+      email,
+      error,
+    }));
   }
 };
 

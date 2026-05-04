@@ -7,7 +7,7 @@ import { rescueContext } from "../context/rescueContext";
 import { getToken } from "firebase/messaging";
 import { messaging } from "../firebase/firebase";
 import axios from "axios";
-import { isDealLiveNow } from "../utils/dateTime";
+import { getDealLastEnd } from "../utils/dateTime";
 export default function Home() {
   const { liveDeals, loading,backendUrl,user,userLogin } = useContext(rescueContext);
 
@@ -71,7 +71,10 @@ useEffect(() => {
     );
   }
 
-  const activeDeals = (liveDeals || []).filter((deal) => isDealLiveNow(deal));
+  const activeDeals = (liveDeals || []).filter((deal) => {
+    const lastEnd = getDealLastEnd(deal);
+    return lastEnd ? lastEnd >= new Date() : false;
+  });
 
   useEffect(() => {
     const maxPage = Math.max(1, Math.ceil(activeDeals.length / dealsPerPage));
