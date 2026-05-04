@@ -7,6 +7,7 @@ import { rescueContext } from "../context/rescueContext";
 import { getToken } from "firebase/messaging";
 import { messaging } from "../firebase/firebase";
 import axios from "axios";
+import { isDealLiveNow } from "../utils/dateTime";
 export default function Home() {
   const { liveDeals, loading,backendUrl,user,userLogin } = useContext(rescueContext);
 
@@ -70,8 +71,18 @@ useEffect(() => {
     );
   }
 
+  const activeDeals = (liveDeals || []).filter((deal) => isDealLiveNow(deal));
+
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(activeDeals.length / dealsPerPage));
+
+    if (currentPage > maxPage) {
+      setCurrentPage(maxPage);
+    }
+  }, [activeDeals.length, currentPage]);
+
   // ❌ EMPTY STATE
-  if (!liveDeals || liveDeals.length === 0) {
+  if (activeDeals.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center text-gray-600">
         No current deals available
@@ -82,9 +93,9 @@ useEffect(() => {
   // Pagination logic
   const indexOfLastDeal = currentPage * dealsPerPage;
   const indexOfFirstDeal = indexOfLastDeal - dealsPerPage;
-  const currentDeals = liveDeals.slice(indexOfFirstDeal, indexOfLastDeal);
+  const currentDeals = activeDeals.slice(indexOfFirstDeal, indexOfLastDeal);
 
-  const totalPages = Math.ceil(liveDeals.length / dealsPerPage);
+  const totalPages = Math.ceil(activeDeals.length / dealsPerPage);
 
   const handlePageChange = (page) => {
     setCurrentPage(page);
