@@ -1,11 +1,17 @@
 import userModel from "../models/userModel.js";
 import PendingSignup from "../models/pendingSignupModel.js";
+import dealModel from "../models/dealModel.js";
+import UserCoupon from "../models/userCouponModel.js";
 import validator from 'validator'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
 import nodemailer from "nodemailer";
-import { sendContactEmail, sendVerificationOtpEmail } from "../services/emailService.js";
+import { sendContactEmail, sendCouponPurchaseEmail, sendVerificationOtpEmail } from "../services/emailService.js";
 import { clearCsrfCookie, setCsrfCookie } from "../middleware/csrfMiddleware.js";
+
+const signupOfferDeals = {
+  BOGODES: "6a06092103a1c806167f0b9b"
+};
 
 const createToken=async(id)=>{
     const token= jwt.sign({ id, tokenType: "access" },process.env.JWT_SECRET_KEY, { expiresIn: "1d" })
@@ -23,6 +29,7 @@ const MIN_PASSWORD_LENGTH = 8;
 const normalizeEmail = (email = "") => email.toLowerCase().trim();
 const normalizePhone = (phone = "") => String(phone).trim();
 const normalizeUserId = (userId = "") => String(userId).trim();
+const normalizeOfferCode = (offer = "") => String(offer).trim().toUpperCase();
 const isProduction = process.env.NODE_ENV === "production";
 
 const getSharedCookieDomain = () => {
@@ -70,6 +77,66 @@ const buildOtpPayload = () => {
   };
 };
 
+const getDealIdForSignupOffer = (offerCode) => signupOfferDeals[offerCode] || null;
+
+const validateSignupOffer = async (offerCode) => {
+  if (!offerCode) {
+    return { deal: null };
+  }
+
+  const dealId = getDealIdForSignupOffer(offerCode);
+  if (!dealId) {
+    return { error: "Invalid signup offer" };
+  }
+
+  const deal = await dealModel.findById(dealId);
+  if (!deal || !deal.isActive) {
+    return { error: "This signup offer is no longer available" };
+  }
+
+  if (deal.validTill && new Date() > new Date(deal.validTill)) {
+    return { error: "This signup offer is no longer available" };
+  }
+
+  const totalClaims = await UserCoupon.countDocuments({ deal: deal._id });
+  if (totalClaims >= deal.maxRedemptions) {
+    return { error: "This signup offer is fully claimed" };
+  }
+
+  return { deal };
+};
+
+const issueSignupOfferCoupon = async (user, offerCode) => {
+  const { deal, error } = await validateSignupOffer(offerCode);
+  if (error || !deal) {
+    return null;
+  }
+
+  const existingCoupon = await UserCoupon.findOne({
+    user: user._id,
+    deal: deal._id,
+    isUsed: false
+  });
+
+  if (existingCoupon) {
+    await existingCoupon.populate("deal");
+    return existingCoupon;
+  }
+
+  const coupon = await UserCoupon.create({
+    user: user._id,
+    deal: deal._id,
+    couponCode: `${offerCode}-${user._id.toString().slice(-6).toUpperCase()}`
+  });
+
+  await dealModel.updateOne({ _id: deal._id }, { $inc: { redeemedCount: 1 } });
+  await coupon.populate("deal");
+  await coupon.populate("user");
+  await sendCouponPurchaseEmail(user.email, coupon);
+
+  return coupon;
+};
+
 const userLogin=async(req,res)=>{
     try{
         const {email,password}=req.body;
@@ -109,10 +176,11 @@ const userLogin=async(req,res)=>{
 const userRegister=async(req,res)=>{
     try{
         
-        const{firstName,lastName,email,password,phone,userId}=req.body;
+        const{firstName,lastName,email,password,phone,userId,offer}=req.body;
         const normalizedEmail = normalizeEmail(email);
         const normalizedPhone = normalizePhone(phone);
         const normalizedUserId = normalizeUserId(userId);
+        const normalizedOfferCode = normalizeOfferCode(offer);
      
        
         if(!validator.isEmail(normalizedEmail))
@@ -134,6 +202,14 @@ const userRegister=async(req,res)=>{
         });
         if(existingUser)
             return res.status(400).json({success:false,message:"User already exists"})
+
+        const signupOffer = await validateSignupOffer(normalizedOfferCode);
+        if (signupOffer.error) {
+          return res.status(400).json({
+            success: false,
+            message: signupOffer.error
+          });
+        }
 
         const pendingConflict = await PendingSignup.findOne({
           email: { $ne: normalizedEmail },
@@ -159,6 +235,7 @@ const userRegister=async(req,res)=>{
             email: normalizedEmail,
             password: hashedPassword,
             userId: normalizedUserId,
+            offerCode: normalizedOfferCode || null,
             ...otpPayload
           },
           {
@@ -266,6 +343,11 @@ const verifySignupOtp = async (req, res) => {
       isVerified: true
     });
 
+    let signupOfferCoupon = null;
+    if (pendingSignup.offerCode) {
+      signupOfferCoupon = await issueSignupOfferCoupon(user, pendingSignup.offerCode);
+    }
+
     await PendingSignup.deleteOne({ _id: pendingSignup._id });
 
     const token = await createToken(user._id);
@@ -273,7 +355,10 @@ const verifySignupOtp = async (req, res) => {
 
     return res.json({
       success: true,
-      message: "Email verified successfully"
+      message: signupOfferCoupon
+        ? "Email verified successfully. Your free coupon has been issued."
+        : "Email verified successfully",
+      coupon: signupOfferCoupon
     });
   } catch (error) {
     console.log(error);

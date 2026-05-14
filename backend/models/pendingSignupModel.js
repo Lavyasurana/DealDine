@@ -13,6 +13,7 @@ const pendingSignupSchema = new mongoose.Schema({
   },
   password: { type: String, required: true },
   phone: { type: String, required: true, trim: true },
+  offerCode: { type: String, trim: true, uppercase: true, default: null },
   otp: { type: String, required: true },
   otpExpiresAt: { type: Date, required: true },
   otpLastSentAt: { type: Date, required: true },

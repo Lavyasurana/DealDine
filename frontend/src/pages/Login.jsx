@@ -2,7 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import { rescueContext } from "../context/rescueContext";
 import axios from 'axios'
 import { toast } from 'react-toastify';
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 
 const SIGNUP_OTP_STORAGE_KEY = "pendingSignupOtp";
 
@@ -19,14 +19,17 @@ export function Login() {
     const [otp, setOtp] = useState('');
     const [showOtpStep, setShowOtpStep] = useState(false);
     const [resendCooldown, setResendCooldown] = useState(0);
+    const [offerCode, setOfferCode] = useState('');
+    const [searchParams] = useSearchParams();
 
     const { backendUrl, navigate, setUserLogin,getUser } = useContext(rescueContext);
 
-    const persistPendingSignup = (signupEmail) => {
+    const persistPendingSignup = (signupEmail, signupOfferCode) => {
         sessionStorage.setItem(
             SIGNUP_OTP_STORAGE_KEY,
             JSON.stringify({
                 email: signupEmail,
+                offerCode: signupOfferCode || '',
                 expiresAt: Date.now() + 10 * 60 * 1000,
             })
         );
@@ -59,10 +62,10 @@ export function Login() {
         clearPendingSignup();
     };
 
-    const completeLogin = async () => {
+    const completeLogin = async (couponId) => {
         setUserLogin(true);
         await getUser();
-        navigate("/");
+        navigate(couponId ? `/coupon/${couponId}` : "/");
     };
 
     const startResendCooldown = () => {
@@ -104,8 +107,8 @@ export function Login() {
                     );
 
                     if (response.data.success) {
-                        await completeLogin();
-                        toast.success("Account created successfully");
+                        await completeLogin(response.data.coupon?._id);
+                        toast.success(response.data.coupon ? "Account created and coupon issued" : "Account created successfully");
                         resetSignupForm();
                     } else {
                         toast.error(response.data.message);
@@ -124,7 +127,7 @@ export function Login() {
     
                 const response = await axios.post(
                     `${backendUrl}/api/user/register`,
-                    { firstName, lastName, email, password, phone, userId }
+                    { firstName, lastName, email, password, phone, userId, offer: offerCode }
                 );
     
                 if (response.data.success) {
@@ -132,7 +135,7 @@ export function Login() {
                     setOtp('');
                     setShowOtpStep(true);
                     startResendCooldown();
-                    persistPendingSignup(email);
+                    persistPendingSignup(email, offerCode);
                 }
                 else{
                     toast.error(response.data.message)
@@ -203,6 +206,7 @@ export function Login() {
             }
 
             setEmail(pendingSignup.email);
+            setOfferCode(pendingSignup.offerCode || '');
             setCurrentState("Sign Up");
             setShowOtpStep(true);
 
@@ -215,6 +219,17 @@ export function Login() {
             clearPendingSignup();
         }
     }, []);
+
+    useEffect(() => {
+        const offerFromUrl = searchParams.get("offer");
+
+        if (!offerFromUrl) {
+            return;
+        }
+
+        setOfferCode(offerFromUrl.trim().toUpperCase());
+        setCurrentState("Sign Up");
+    }, [searchParams]);
 
     return (
         <div className="min-h-screen bg-gray-100 flex items-center justify-center px-4">{
@@ -270,6 +285,11 @@ export function Login() {
                             <input required onChange={(e) => { setPhone(e.target.value) }} name='phone' value={phone} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="number" placeholder='Phone' />
                             <input required onChange={(e) => { setPassword(e.target.value) }} name='password' value={password} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="password" placeholder='Password' />
                             <input required onChange={(e) => { setConfirmPassword(e.target.value) }} name='confirmPassword' value={confirmPassword} className='border border-gray-300 rounded py-1.5 px-3.5 w-full' type="password" placeholder='Confirm Password' />
+                            {offerCode ? (
+                                <div className="rounded border border-emerald-200 bg-emerald-50 px-3.5 py-2 text-sm text-emerald-700">
+                                    Signup offer applied: {offerCode}
+                                </div>
+                            ) : null}
                             <div className="flex items-center gap-2 text-sm mt-2">
                                 <input
                                     type="checkbox"
