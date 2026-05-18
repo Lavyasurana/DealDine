@@ -1,4 +1,5 @@
 import UserCoupon from "../models/userCouponModel.js";
+import mongoose from "mongoose";
 import dealModel from "../models/dealModel.js";
 import Bill from "../models/billModel.js";
 import { sendCouponPurchaseEmail } from "../services/emailService.js";
@@ -7,6 +8,18 @@ import { isDealLiveAt } from "../utils/dealSchedule.js";
 const hasReachedClaimLimit = async (dealId, maxRedemptions) => {
   const totalClaims = await UserCoupon.countDocuments({ deal: dealId });
   return totalClaims >= maxRedemptions;
+};
+
+const findCouponByIdentifier = (identifier) => {
+  const normalizedIdentifier = String(identifier || "").trim();
+  const normalizedCouponCode = normalizedIdentifier.toUpperCase();
+  const query = [{ couponCode: normalizedCouponCode }];
+
+  if (mongoose.Types.ObjectId.isValid(normalizedIdentifier)) {
+    query.push({ _id: normalizedIdentifier });
+  }
+
+  return UserCoupon.findOne({ $or: query });
 };
 
 export const createCoupon = async (req, res) => {
@@ -104,7 +117,7 @@ export const getMyCoupons = async (req, res) => {
       const requesterId = req.user.id;
       const isAdmin = req.user.role === "admin";
   
-      const coupon = await UserCoupon.findById(couponId)
+      const coupon = await findCouponByIdentifier(couponId)
         .populate("deal")
         .populate("user");
   
@@ -152,7 +165,7 @@ export const redeemCoupon = async (req, res) => {
       const { couponId } = req.params;
       const adminId = req.user.id;
   
-      const coupon = await UserCoupon.findById(couponId).populate("deal");
+      const coupon = await findCouponByIdentifier(couponId).populate("deal");
   
       if (!coupon) {
         return res.status(404).json({
@@ -273,7 +286,7 @@ export const updateCouponBill = async (req, res) => {
       });
     }
 
-    const coupon = await UserCoupon.findById(couponId).populate("deal");
+    const coupon = await findCouponByIdentifier(couponId).populate("deal");
 
     if (!coupon) {
       return res.status(404).json({

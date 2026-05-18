@@ -125,8 +125,7 @@ const issueSignupOfferCoupon = async (user, offerCode) => {
 
   const coupon = await UserCoupon.create({
     user: user._id,
-    deal: deal._id,
-    couponCode: `${offerCode}-${user._id.toString().slice(-6).toUpperCase()}`
+    deal: deal._id
   });
 
   await dealModel.updateOne({ _id: deal._id }, { $inc: { redeemedCount: 1 } });

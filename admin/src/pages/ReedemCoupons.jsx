@@ -95,7 +95,7 @@ const RedeemCoupon = () => {
         <form onSubmit={redeemHandler} className="flex flex-col gap-4 w-[400px]">
           <input
             type="text"
-            placeholder="Enter Coupon ID"
+            placeholder="Enter 8-character Coupon ID"
             value={couponId}
             onChange={(e) => setCouponId(e.target.value)}
             required
@@ -163,7 +163,7 @@ const RedeemCoupon = () => {
               ) : (
                 redeemedCoupons.map((coupon) => (
                   <tr key={coupon._id} className="border-t align-top">
-                    <td className="px-4 py-3 font-mono text-xs">{coupon._id}</td>
+                    <td className="px-4 py-3 font-mono text-xs">{coupon.couponCode || coupon._id}</td>
                     <td className="px-4 py-3">
                       <p className="font-medium">
                         {coupon.user?.firstName} {coupon.user?.lastName}

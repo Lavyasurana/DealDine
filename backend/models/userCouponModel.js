@@ -1,4 +1,7 @@
 import mongoose from "mongoose";
+import crypto from "node:crypto";
+
+const generateCouponCode = () => crypto.randomBytes(4).toString("hex").toUpperCase();
 
 const userCouponSchema = new mongoose.Schema({
 
@@ -16,7 +19,10 @@ const userCouponSchema = new mongoose.Schema({
 
   couponCode: {
     type: String,
-    unique: true
+    unique: true,
+    trim: true,
+    uppercase: true,
+    default: generateCouponCode
   },
 
   isUsed: {

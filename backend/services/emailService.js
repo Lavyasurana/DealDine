@@ -194,7 +194,7 @@ export const sendCouponPurchaseEmail = async (email, coupon) => {
     const html = `
       <h2>Your coupon is ready 🎉</h2>
       <p>Thank you for your purchase on DealDine.</p>
-      <p><b>Coupon ID:</b> ${coupon._id}</p>
+      <p><b>Coupon ID:</b> ${coupon.couponCode || coupon._id}</p>
       <p><b>Restaurant:</b> ${coupon.deal?.resName || "N/A"}</p>
       <p><b>Deal:</b> ${coupon.deal?.dealName || "N/A"}</p>
       <p><b>Price:</b> ₹${coupon.deal?.price ?? "N/A"}</p>

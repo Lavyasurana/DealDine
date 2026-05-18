@@ -183,8 +183,8 @@ export function CouponPage() {
           {/* Coupon ID */}
           <div className="mt-6 bg-emerald-100 p-4 rounded-xl">
             <p className="text-sm text-gray-500">Coupon ID</p>
-            <p className="text-lg font-bold tracking-widest text-emerald-700">
-              {coupon._id}
+            <p className="break-all font-mono text-xs font-bold text-emerald-700 sm:text-sm">
+              {coupon.couponCode || coupon._id}
             </p>
           </div>
 
