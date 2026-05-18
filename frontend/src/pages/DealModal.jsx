@@ -59,6 +59,12 @@ export function DealModal() {
               {deal.dealName}
             </p>
 
+            {deal.description ? (
+              <p className="text-sm leading-6 text-gray-600 line-clamp-2">
+                {deal.description}
+              </p>
+            ) : null}
+
             <div className="flex items-center gap-2 text-gray-600">
               <Clock className="w-4 h-4" />
               <p>Dates: {formatDealDateList(deal)}</p>

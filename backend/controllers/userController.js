@@ -10,7 +10,7 @@ import { sendContactEmail, sendCouponPurchaseEmail, sendVerificationOtpEmail } f
 import { clearCsrfCookie, setCsrfCookie } from "../middleware/csrfMiddleware.js";
 
 const signupOfferDeals = {
-  BOGODES: "6a06092103a1c806167f0b9b"
+  BOGODES: "6a0af2d4e6d7555bf32dc3c5"
 };
 
 const createToken=async(id)=>{
