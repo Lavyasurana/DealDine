@@ -155,6 +155,11 @@ const issueCouponForTransaction = async (transaction, session) => {
   if (transaction.userCouponId) {
     const coupon = await UserCoupon.findById(transaction.userCouponId).session(session);
     if (coupon) {
+      await userModel.updateOne(
+        { _id: coupon.user },
+        { $addToSet: { issuedCoupons: coupon._id } },
+        { session }
+      );
       return { coupon, created: false };
     }
   }
@@ -166,6 +171,11 @@ const issueCouponForTransaction = async (transaction, session) => {
   }).session(session);
 
   if (existingCoupon) {
+    await userModel.updateOne(
+      { _id: transaction.userId },
+      { $addToSet: { issuedCoupons: existingCoupon._id } },
+      { session }
+    );
     transaction.userCouponId = existingCoupon._id;
     transaction.status = "approved";
     await transaction.save({ session });
@@ -190,6 +200,12 @@ const issueCouponForTransaction = async (transaction, session) => {
 
     await reserveDealRedemption(deal, session, 1);
 
+    await userModel.updateOne(
+      { _id: transaction.userId },
+      { $addToSet: { issuedCoupons: coupon._id } },
+      { session }
+    );
+
     transaction.userCouponId = coupon._id;
     transaction.status = "approved";
     await transaction.save({ session });
@@ -209,6 +225,12 @@ const issueCouponForTransaction = async (transaction, session) => {
     if (!coupon) {
       throw error;
     }
+
+    await userModel.updateOne(
+      { _id: transaction.userId },
+      { $addToSet: { issuedCoupons: coupon._id } },
+      { session }
+    );
 
     transaction.userCouponId = coupon._id;
     transaction.status = "approved";
@@ -629,6 +651,12 @@ export const payWithCredits = async (req, res) => {
         );
 
         await reserveDealRedemption(deal, session, 1);
+
+        await userModel.updateOne(
+          { _id: userId },
+          { $addToSet: { issuedCoupons: coupon._id } },
+          { session }
+        );
 
         return {
           couponId: coupon._id,

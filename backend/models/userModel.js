@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema({
   issuedCoupons: [
     {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Deal"
+      ref: "UserCoupon"
     }],
     isVerified: {
       type: Boolean,

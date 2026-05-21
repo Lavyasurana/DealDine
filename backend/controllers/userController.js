@@ -119,6 +119,10 @@ const issueSignupOfferCoupon = async (user, offerCode) => {
   });
 
   if (existingCoupon) {
+    await userModel.updateOne(
+      { _id: user._id },
+      { $addToSet: { issuedCoupons: existingCoupon._id } }
+    );
     await existingCoupon.populate("deal");
     return existingCoupon;
   }
@@ -127,6 +131,11 @@ const issueSignupOfferCoupon = async (user, offerCode) => {
     user: user._id,
     deal: deal._id
   });
+
+  await userModel.updateOne(
+    { _id: user._id },
+    { $addToSet: { issuedCoupons: coupon._id } }
+  );
 
   await dealModel.updateOne({ _id: deal._id }, { $inc: { redeemedCount: 1 } });
   await coupon.populate("deal");

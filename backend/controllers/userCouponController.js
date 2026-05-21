@@ -1,5 +1,6 @@
 import UserCoupon from "../models/userCouponModel.js";
 import mongoose from "mongoose";
+import userModel from "../models/userModel.js";
 import dealModel from "../models/dealModel.js";
 import Bill from "../models/billModel.js";
 import { sendCouponPurchaseEmail } from "../services/emailService.js";
@@ -68,6 +69,11 @@ export const createCoupon = async (req, res) => {
       user: userId,
       deal: dealId
     });
+
+    await userModel.updateOne(
+      { _id: userId },
+      { $addToSet: { issuedCoupons: coupon._id } }
+    );
 
     await coupon.populate("deal");
     await coupon.populate("user");
